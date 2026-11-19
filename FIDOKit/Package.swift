@@ -10,11 +10,18 @@ let package = Package(
     targets: [
         // Pure Swift: APDU model, ISO 7816 channel, transport contract, traces, mock transport.
         .target(name: "CardCore"),
-        // CoreNFC transport (iOS only) and diagnostics scenarios. Re-exports CardCore.
-        .target(name: "FIDOKit", dependencies: ["CardCore"]),
+        // Pure Swift: canonical CBOR, CTAP client, command models (GetInfo, ...).
+        .target(name: "CTAP", dependencies: ["CardCore"]),
+        // CoreNFC transport (iOS only) and diagnostics scenarios. Re-exports CardCore and CTAP.
+        .target(name: "FIDOKit", dependencies: ["CardCore", "CTAP"]),
         .testTarget(
             name: "CardCoreTests",
             dependencies: ["CardCore"],
+            resources: [.copy("Fixtures")]
+        ),
+        .testTarget(
+            name: "CTAPTests",
+            dependencies: ["CTAP"],
             resources: [.copy("Fixtures")]
         ),
         // Loads fixtures from CardCoreTests/Fixtures via #filePath, so there is a single copy.

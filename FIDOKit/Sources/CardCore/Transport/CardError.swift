@@ -27,3 +27,20 @@ extension CardError: LocalizedError {
         }
     }
 }
+
+extension CardError: TraceErrorConvertible {
+    /// `code` is the matching `sessionEnded.reason`, e.g. `tagConnectionLost`.
+    public var traceError: TraceError {
+        let reason = SessionEndReason(self)
+        let name: String = switch self {
+        case .userCancelled: "USER_CANCELLED"
+        case .sessionTimeout: "SESSION_TIMEOUT"
+        case .tagConnectionLost: "TAG_CONNECTION_LOST"
+        case .nfcUnavailable: "NFC_UNAVAILABLE"
+        case .invalidAPDU: "INVALID_APDU"
+        case .notConnected: "NOT_CONNECTED"
+        case .underlying: "TRANSPORT_ERROR"
+        }
+        return TraceError(domain: .transport, code: reason.rawValue, name: name, message: errorDescription ?? name)
+    }
+}

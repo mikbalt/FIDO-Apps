@@ -1,0 +1,23 @@
+FIDOSims trace 6F1C2D3E-0000-4000-8000-0000000000B2 | nfc | iPhone16,2 iOS 26.1 | Synthetic v2 timeline | diagnostics success
+01 SELECT_FIDO
+TX 00 A4 04 00 08 A0 00 00 06 47 2F 00 01 00
+RX 46 49 44 4F 5F 32 5F 30 | SW 9000
+RTT 12.000 ms
+CMD 1 SELECT_FIDO | SW 9000 | 1 exchange | 12.000 ms
+02 GET_INFO
+TX 80 10 80 00 01 04 00
+RX 01 | SW 9100
+RTT 30.000 ms
+STATUS PROCESSING
+03 GET_INFO
+TX 80 11 00 00 00
+RX 00 A5 01 82 68 46 49 44 4F 5F 32 5F 30 68 46 49 44 4F 5F 32 5F 31 03 50 2F C0 57 9F 81 13 47 EA B1 16 BB 5A 8D B9 20 2A 04 A3 62 72 6B F5 62 75 70 F5 69 63 6C 69 65 6E 74 50 69 6E F4 05 1A 00 00 04 00 06 82 02 01 | SW 9000
+RTT 40.000 ms
+CMD 2 GET_INFO | CTAP 04 status 00 | SW 9000 | 2 exchanges | 70.200 ms
+HOST CBOR_DECODE 0.200 ms
+WARN CBOR_NON_SHORTEST_INTEGER: GET_INFO: Integer at byte 61 is not in its shortest form.
+Session total 1583.200 ms | Card wait 1500.000 ms | APDU total 82.000 ms | Host 1.200 ms | 3 exchanges
+Scenario total 1700.000 ms = Pre-session 20.000 ms + Card wait 1500.000 ms + Card phase 83.200 ms + Post-session 96.800 ms
+Card phase 83.200 ms = APDU total 82.000 ms + In-session host 1.200 ms
+Commands: SELECT_FIDO 12.000 ms (1), GET_INFO 70.200 ms (1)
+Host steps: CBOR_DECODE 0.200 ms (1)

@@ -7,9 +7,70 @@ struct TraceCodingTests {
     @Test("All synthetic fixtures decode", arguments: Fixtures.synthetic)
     func fixturesDecode(name: String) throws {
         let trace = try Fixtures.trace(name)
-        #expect(trace.schemaVersion == 1)
+        #expect(Trace.supportedSchemaVersions.contains(trace.schemaVersion))
         #expect(!trace.exchanges.isEmpty)
-        #expect(trace.sessionStartedTime == 0)
+        if trace.schemaVersion == 1 {
+            #expect(trace.sessionStartedTime == 0)
+        } else {
+            #expect(trace.scenarioStartedTime == 0)
+        }
+    }
+
+    @Test("v1 fixtures decode as v1, with no v2 fields, and re-encode without them", arguments: Fixtures.syntheticV1)
+    func v1Fixtures(name: String) throws {
+        let trace = try Fixtures.trace(name)
+        #expect(trace.schemaVersion == 1)
+        #expect(trace.scenario == nil)
+        #expect(trace.outcome == nil)
+        #expect(trace.scenarioStartedTime == nil)
+        let json = String(decoding: try trace.jsonData(), as: UTF8.self)
+        #expect(json.contains(#""schemaVersion" : 1"#))
+        for key in ["scenario", "outcome", "aaguid", "versions", "firmwareVersion"] {
+            #expect(!json.contains("\"\(key)\""))
+        }
+    }
+
+    @Test("The v2 fixture decodes every v2 field and event type")
+    func v2Fixture() throws {
+        let trace = try Fixtures.trace("synthetic-v2-timeline")
+        #expect(trace.schemaVersion == 2)
+        #expect(trace.scenario == .diagnostics)
+        #expect(trace.outcome == .success)
+        #expect(trace.card.aaguid == UUID(uuidString: "2FC0579F-8113-47EA-B116-BB5A8DB9202A"))
+        #expect(trace.card.versions == ["FIDO_2_0", "FIDO_2_1"])
+        #expect(trace.card.firmwareVersion == nil)
+        #expect(trace.commands.map(\.label) == ["SELECT_FIDO", "GET_INFO"])
+        #expect(trace.commands[1].ctapCommand == 0x04)
+        #expect(trace.commands[1].ctapStatus == 0x00)
+        #expect(trace.commands[1].exchanges == [2, 3])
+        #expect(trace.hostSteps == [HostStepEvent(label: "CBOR_DECODE", tStart: 1_603_300_000, tEnd: 1_603_500_000)])
+        #expect(trace.warnings.map(\.code) == [.cborNonShortestInteger])
+        #expect(trace.events.contains(.status(t: 1_563_000_000, value: .processing)))
+        #expect(trace.scenarioEndedTime == 1_700_000_000)
+    }
+
+    @Test("Outcome errors, unknown scenarios and unknown warning codes round-trip")
+    func v2Values() throws {
+        var trace = try Fixtures.trace("synthetic-v2-timeline")
+        trace.scenario = .unknown("enrollFingerprint")
+        trace.outcome = .failure(TraceError(domain: .ctap, code: "0x31", name: "CTAP2_ERR_PIN_INVALID", message: "PIN invalid"))
+        trace.events.append(.warning(WarningEvent(t: 5, code: TraceWarningCode(rawValue: "FUTURE_CHECK"), message: "x")))
+        trace.events.append(.status(t: 6, value: .other(0x07)))
+        trace.events.append(.status(t: 7, value: .other(nil)))
+        trace.card.firmwareVersion = 0x0102_0304
+        let json = String(decoding: try trace.jsonData(), as: UTF8.self)
+        #expect(json.contains(#""domain" : "ctap""#))
+        #expect(json.contains(#""scenario" : "enrollFingerprint""#))
+        #expect(json.contains(#""value" : "07""#))
+        #expect(json.contains(#""value" : "NONE""#))
+        #expect(try Trace(jsonData: Data(json.utf8)) == trace)
+    }
+
+    @Test("An unsupported schema version is refused with a clear error")
+    func unsupportedVersion() throws {
+        var json = String(decoding: try Fixtures.trace("synthetic-v2-timeline").jsonData(), as: UTF8.self)
+        json = json.replacingOccurrences(of: #""schemaVersion" : 2"#, with: #""schemaVersion" : 3"#)
+        #expect(throws: DecodingError.self) { try Trace(jsonData: Data(json.utf8)) }
     }
 
     @Test("decode(encode(trace)) == trace", arguments: Fixtures.synthetic)

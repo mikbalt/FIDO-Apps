@@ -33,6 +33,11 @@ public enum Hex {
 
     private static let digits = Array("0123456789ABCDEF")
 
+    /// One byte as two uppercase hex digits, e.g. `04`.
+    public static func byte(_ byte: UInt8) -> String {
+        byteString(byte)
+    }
+
     private static func byteString(_ byte: UInt8) -> String {
         String([digits[Int(byte >> 4)], digits[Int(byte & 0x0F)]])
     }

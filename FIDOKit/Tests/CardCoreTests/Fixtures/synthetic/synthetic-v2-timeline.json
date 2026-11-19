@@ -1,0 +1,42 @@
+{
+  "schemaVersion": 2,
+  "id": "6F1C2D3E-0000-4000-8000-0000000000B2",
+  "createdAt": "2026-11-19T00:00:00Z",
+  "app": { "name": "FIDOSims", "version": "0.2.0", "build": "1" },
+  "transport": "nfc",
+  "device": { "model": "iPhone16,2", "os": "iOS 26.1" },
+  "scenario": "diagnostics",
+  "outcome": { "status": "success" },
+  "card": {
+    "label": "Synthetic v2 timeline",
+    "initialSelectedAID": "A0000006472F0001",
+    "aaguid": "2FC0579F-8113-47EA-B116-BB5A8DB9202A",
+    "versions": ["FIDO_2_0", "FIDO_2_1"]
+  },
+  "options": { "lengthForm": "short", "getResponseSupported": true },
+  "events": [
+    { "type": "scenarioStarted", "t": 0 },
+    { "type": "sessionStarted", "t": 20000000 },
+    { "type": "cardDetected", "t": 1520000000 },
+    { "type": "exchange", "index": 1, "commandIndex": 1, "label": "SELECT_FIDO",
+      "tx": "00A4040008A0000006472F000100", "rx": "4649444F5F325F30", "sw": "9000",
+      "tStart": 1520500000, "tEnd": 1532500000, "sensitive": false },
+    { "type": "command", "commandIndex": 1, "label": "SELECT_FIDO", "sw": "9000",
+      "tStart": 1520500000, "tEnd": 1532500000, "exchanges": [1] },
+    { "type": "exchange", "index": 2, "commandIndex": 2, "label": "GET_INFO",
+      "tx": "80108000010400", "rx": "01", "sw": "9100",
+      "tStart": 1533000000, "tEnd": 1563000000, "sensitive": false },
+    { "type": "status", "t": 1563000000, "value": "PROCESSING" },
+    { "type": "exchange", "index": 3, "commandIndex": 2, "label": "GET_INFO",
+      "tx": "8011000000",
+      "rx": "00A50182684649444F5F325F30684649444F5F325F3103502FC0579F811347EAB116BB5A8DB9202A04A362726BF5627570F569636C69656E7450696EF4051A0000040006820201",
+      "sw": "9000", "tStart": 1563200000, "tEnd": 1603200000, "sensitive": false },
+    { "type": "command", "commandIndex": 2, "label": "GET_INFO", "ctapCommand": "04", "ctapStatus": "00", "sw": "9000",
+      "tStart": 1533000000, "tEnd": 1603200000, "exchanges": [2, 3] },
+    { "type": "hostStep", "label": "CBOR_DECODE", "tStart": 1603300000, "tEnd": 1603500000 },
+    { "type": "warning", "t": 1603500000, "code": "CBOR_NON_SHORTEST_INTEGER",
+      "message": "GET_INFO: Integer at byte 61 is not in its shortest form." },
+    { "type": "sessionEnded", "t": 1650000000, "reason": "completed" },
+    { "type": "scenarioEnded", "t": 1700000000 }
+  ]
+}

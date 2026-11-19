@@ -28,3 +28,15 @@ extension MockTransportError: LocalizedError {
         }
     }
 }
+
+extension MockTransportError: TraceErrorConvertible {
+    public var traceError: TraceError {
+        let (code, name): (String, String) = switch self {
+        case .unexpectedCommand: ("unexpectedCommand", "MOCK_UNEXPECTED_COMMAND")
+        case .scriptExhausted: ("scriptExhausted", "MOCK_SCRIPT_EXHAUSTED")
+        case .redactedTrace: ("redactedTrace", "MOCK_REDACTED_TRACE")
+        case .notOpen: ("notOpen", "MOCK_NOT_OPEN")
+        }
+        return TraceError(domain: .internal, code: code, name: name, message: errorDescription ?? name)
+    }
+}

@@ -21,3 +21,14 @@ extension APDUError: LocalizedError {
         }
     }
 }
+
+extension APDUError: TraceErrorConvertible {
+    public var traceError: TraceError {
+        let (code, name): (String, String) = switch self {
+        case .dataTooLong: ("dataTooLong", "APDU_DATA_TOO_LONG")
+        case .leOutOfRange: ("leOutOfRange", "APDU_LE_OUT_OF_RANGE")
+        case .responseTooShort: ("responseTooShort", "APDU_RESPONSE_TOO_SHORT")
+        }
+        return TraceError(domain: .validation, code: code, name: name, message: errorDescription ?? name)
+    }
+}

@@ -8,6 +8,15 @@ enum Fixtures {
         "synthetic-u2f-only",
         "synthetic-select-fail",
         "synthetic-pcsc-recorder",
+        "synthetic-v2-timeline",
+    ]
+
+    /// v1 fixtures, written before trace v2.
+    static let syntheticV1 = [
+        "synthetic-fido2-getinfo-chained",
+        "synthetic-u2f-only",
+        "synthetic-select-fail",
+        "synthetic-pcsc-recorder",
     ]
 
     static func url(_ name: String, subdirectory: String = "synthetic", extension ext: String = "json") throws -> URL {

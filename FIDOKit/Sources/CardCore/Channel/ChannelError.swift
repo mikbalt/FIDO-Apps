@@ -25,3 +25,19 @@ extension ChannelError: LocalizedError {
         }
     }
 }
+
+extension ChannelError: TraceErrorConvertible {
+    public var traceError: TraceError {
+        let message = errorDescription ?? "\(self)"
+        return switch self {
+        case let .chainingFailed(_, sw):
+            TraceError(domain: .iso7816, code: sw.hex, name: "CHAINING_FAILED", message: message)
+        case .statusUpdateTimeout:
+            TraceError(domain: .iso7816, code: "statusUpdateTimeout", name: "STATUS_UPDATE_TIMEOUT", message: message)
+        case let .unexpectedStatus(sw):
+            .statusWord(sw, message: message)
+        case .unknownAppletVersion:
+            TraceError(domain: .validation, code: "unknownAppletVersion", name: "UNKNOWN_APPLET_VERSION", message: message)
+        }
+    }
+}

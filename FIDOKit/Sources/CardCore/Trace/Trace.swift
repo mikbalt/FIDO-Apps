@@ -2,7 +2,9 @@ import Foundation
 
 /// Metadata plus ordered events for one session. See `docs/trace-format.md`.
 public struct Trace: Sendable, Equatable, Identifiable {
-    public static let currentSchemaVersion = 1
+    public static let currentSchemaVersion = 2
+    /// Versions this build reads. v1 traces decode unchanged and keep `sessionStarted` as their time reference.
+    public static let supportedSchemaVersions = 1...2
 
     public var schemaVersion: Int
     public var id: UUID
@@ -11,6 +13,10 @@ public struct Trace: Sendable, Equatable, Identifiable {
     public var app: AppInfo
     public var transport: TransportKind
     public var device: DeviceInfo
+    /// v2. `nil` for v1 traces.
+    public var scenario: TraceScenario?
+    /// v2. `nil` for v1 traces, and while a scenario is still running.
+    public var outcome: TraceOutcome?
     public var card: CardInfo
     public var options: TraceOptions
     public var events: [TraceEvent]
@@ -22,6 +28,8 @@ public struct Trace: Sendable, Equatable, Identifiable {
         app: AppInfo,
         transport: TransportKind,
         device: DeviceInfo,
+        scenario: TraceScenario? = nil,
+        outcome: TraceOutcome? = nil,
         card: CardInfo,
         options: TraceOptions,
         events: [TraceEvent]
@@ -32,6 +40,8 @@ public struct Trace: Sendable, Equatable, Identifiable {
         self.app = app
         self.transport = transport
         self.device = device
+        self.scenario = scenario
+        self.outcome = outcome
         self.card = card
         self.options = options
         self.events = events
@@ -41,6 +51,36 @@ public struct Trace: Sendable, Equatable, Identifiable {
         events.compactMap { event in
             if case let .exchange(exchange) = event { exchange } else { nil }
         }
+    }
+
+    public var commands: [CommandEvent] {
+        events.compactMap { event in
+            if case let .command(command) = event { command } else { nil }
+        }
+    }
+
+    public var hostSteps: [HostStepEvent] {
+        events.compactMap { event in
+            if case let .hostStep(step) = event { step } else { nil }
+        }
+    }
+
+    public var warnings: [WarningEvent] {
+        events.compactMap { event in
+            if case let .warning(warning) = event { warning } else { nil }
+        }
+    }
+
+    public var scenarioStartedTime: Int64? {
+        events.lazy.compactMap { event in
+            if case let .scenarioStarted(t) = event { t } else { nil }
+        }.first
+    }
+
+    public var scenarioEndedTime: Int64? {
+        events.lazy.compactMap { event in
+            if case let .scenarioEnded(t) = event { t } else { nil }
+        }.first
     }
 
     public var sessionStartedTime: Int64? {
@@ -77,7 +117,7 @@ public struct Trace: Sendable, Equatable, Identifiable {
 
 extension Trace: Codable {
     private enum CodingKeys: String, CodingKey {
-        case schemaVersion, id, createdAt, app, transport, device, card, options, events
+        case schemaVersion, id, createdAt, app, transport, device, scenario, outcome, card, options, events
     }
 
     private static let dateStyle = Date.ISO8601FormatStyle()
@@ -85,6 +125,13 @@ extension Trace: Codable {
     public init(from decoder: any Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         schemaVersion = try container.decode(Int.self, forKey: .schemaVersion)
+        guard Self.supportedSchemaVersions.contains(schemaVersion) else {
+            throw DecodingError.dataCorruptedError(
+                forKey: .schemaVersion, in: container,
+                debugDescription: "Unsupported trace schema version \(schemaVersion); this build reads "
+                    + "\(Self.supportedSchemaVersions.lowerBound)–\(Self.supportedSchemaVersions.upperBound)."
+            )
+        }
         id = try container.decode(UUID.self, forKey: .id)
         let createdAtString = try container.decode(String.self, forKey: .createdAt)
         do {
@@ -98,6 +145,8 @@ extension Trace: Codable {
         app = try container.decode(AppInfo.self, forKey: .app)
         transport = try container.decode(TransportKind.self, forKey: .transport)
         device = try container.decode(DeviceInfo.self, forKey: .device)
+        scenario = try container.decodeIfPresent(TraceScenario.self, forKey: .scenario)
+        outcome = try container.decodeIfPresent(TraceOutcome.self, forKey: .outcome)
         card = try container.decode(CardInfo.self, forKey: .card)
         options = try container.decode(TraceOptions.self, forKey: .options)
         events = try container.decode([TraceEvent].self, forKey: .events)
@@ -111,6 +160,8 @@ extension Trace: Codable {
         try container.encode(app, forKey: .app)
         try container.encode(transport, forKey: .transport)
         try container.encode(device, forKey: .device)
+        try container.encodeIfPresent(scenario, forKey: .scenario)
+        try container.encodeIfPresent(outcome, forKey: .outcome)
         try container.encode(card, forKey: .card)
         try container.encode(options, forKey: .options)
         try container.encode(events, forKey: .events)
