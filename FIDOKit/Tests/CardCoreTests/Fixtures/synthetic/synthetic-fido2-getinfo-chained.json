@@ -1,0 +1,30 @@
+{
+  "schemaVersion": 1,
+  "id": "00000000-0000-4000-8000-00000000A001",
+  "createdAt": "2026-11-19T00:00:00Z",
+  "app": { "name": "FIDOSims", "version": "0.1.0", "build": "1" },
+  "transport": "mock",
+  "device": { "model": "Synthetic", "os": "fixture" },
+  "card": { "label": "Synthetic FIDO2 card", "initialSelectedAID": "A0000006472F0001" },
+  "options": { "lengthForm": "short", "getResponseSupported": false },
+  "events": [
+    { "type": "sessionStarted", "t": 0 },
+    { "type": "cardDetected", "t": 1500000000 },
+    { "type": "exchange", "index": 1, "commandIndex": 1, "label": "SELECT_FIDO",
+      "tx": "00A4040008A0000006472F000100", "rx": "4649444F5F325F30", "sw": "9000",
+      "tStart": 1500200000, "tEnd": 1512600000, "sensitive": false },
+    { "type": "exchange", "index": 2, "commandIndex": 2, "label": "GET_INFO",
+      "tx": "80100000010400", "rx": "00A1018266", "sw": "6105",
+      "tStart": 1513000000, "tEnd": 1560000000, "sensitive": false },
+    { "type": "exchange", "index": 3, "commandIndex": 2, "label": "GET_INFO",
+      "tx": "00C0000005", "rx": "5532465F56", "sw": "6105",
+      "tStart": 1560500000, "tEnd": 1571300000, "sensitive": false },
+    { "type": "exchange", "index": 4, "commandIndex": 2, "label": "GET_INFO",
+      "tx": "00C0000005", "rx": "3268464944", "sw": "6105",
+      "tStart": 1571800000, "tEnd": 1582400000, "sensitive": false },
+    { "type": "exchange", "index": 5, "commandIndex": 2, "label": "GET_INFO",
+      "tx": "00C0000005", "rx": "4F5F325F30", "sw": "9000",
+      "tStart": 1582900000, "tEnd": 1593100000, "sensitive": false },
+    { "type": "sessionEnded", "t": 1600000000, "reason": "completed" }
+  ]
+}

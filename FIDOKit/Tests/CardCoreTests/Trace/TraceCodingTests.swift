@@ -1,0 +1,89 @@
+import CardCore
+import Foundation
+import Testing
+
+@Suite("Trace JSON")
+struct TraceCodingTests {
+    @Test("All synthetic fixtures decode", arguments: Fixtures.synthetic)
+    func fixturesDecode(name: String) throws {
+        let trace = try Fixtures.trace(name)
+        #expect(trace.schemaVersion == 1)
+        #expect(!trace.exchanges.isEmpty)
+        #expect(trace.sessionStartedTime == 0)
+    }
+
+    @Test("decode(encode(trace)) == trace", arguments: Fixtures.synthetic)
+    func roundTrip(name: String) throws {
+        let trace = try Fixtures.trace(name)
+        let decoded = try Trace(jsonData: trace.jsonData(redactSensitive: false))
+        #expect(decoded == trace)
+    }
+
+    @Test("Round trip of a recorded trace, including sub-second createdAt")
+    func recordedRoundTrip() async throws {
+        let start = ContinuousClock.now
+        let recorder = TraceRecorder(
+            metadata: TraceMetadata(
+                createdAt: Date(timeIntervalSince1970: 1_795_000_000.75),
+                app: AppInfo(name: "FIDOSims", version: "0.1.0", build: "1"),
+                transport: .nfc, device: DeviceInfo(model: "iPhone16,2", os: "iOS 26.1"),
+                cardLabel: "Lab card A", options: TraceOptions()
+            ),
+            connection: CardConnection(
+                sessionStartedAt: start, cardDetectedAt: start + .milliseconds(1503),
+                initialSelectedAID: try Hex.parse("A0000006472F0001")
+            )
+        )
+        await recorder.record(
+            RawExchange(
+                command: try Hex.parse("00A4040008A0000006472F000100"),
+                response: ResponseAPDU(data: Data("FIDO_2_0".utf8), sw: .success),
+                startedAt: start + .microseconds(1_503_100), endedAt: start + .microseconds(1_515_500)
+            ),
+            commandIndex: await recorder.nextCommandIndex(), label: "SELECT_FIDO", sensitive: false
+        )
+        await recorder.end(reason: .completed, at: start + .microseconds(1_842_700))
+        let trace = await recorder.trace
+
+        #expect(try Trace(jsonData: trace.jsonData()) == trace)
+    }
+
+    @Test("Encodes hex uppercase without spaces and dates as ISO 8601")
+    func encodingShape() throws {
+        let trace = try Fixtures.trace("synthetic-fido2-getinfo-chained")
+        let json = String(decoding: try trace.jsonData(), as: UTF8.self)
+        #expect(json.contains(#""tx" : "00A4040008A0000006472F000100""#))
+        #expect(json.contains(#""sw" : "9000""#))
+        #expect(json.contains(#""createdAt" : "2026-11-19T00:00:00Z""#))
+        #expect(json.contains(#""initialSelectedAID" : "A0000006472F0001""#))
+        #expect(json.contains(#""type" : "sessionEnded""#))
+    }
+
+    @Test("Redacted JSON hides sensitive bytes and still decodes")
+    func redactedJSON() throws {
+        let trace = try Self.traceWithSensitiveExchange()
+        let json = String(decoding: try trace.jsonData(), as: UTF8.self)
+        #expect(json.contains(#""tx" : "<redacted 8 bytes>""#))
+        #expect(json.contains(#""rx" : "<redacted 3 bytes>""#))
+        #expect(!json.contains("DEADBEEF"))
+
+        let decoded = try Trace(jsonData: Data(json.utf8))
+        let exchange = try #require(decoded.exchanges.first)
+        #expect(exchange.isRedacted)
+        #expect(exchange.tx.count == 8)
+        #expect(exchange.sw == .success)
+
+        let plain = String(decoding: try trace.jsonData(redactSensitive: false), as: UTF8.self)
+        #expect(plain.contains("DEADBEEF"))
+    }
+
+    static func traceWithSensitiveExchange() throws -> Trace {
+        var trace = try MockScript.trace([.init(tx: "80100000DEADBEEF", rx: "010203", sw: "9000")])
+        trace.events = trace.events.map { event in
+            guard case var .exchange(exchange) = event else { return event }
+            exchange.sensitive = true
+            return .exchange(exchange)
+        }
+        return trace
+    }
+}

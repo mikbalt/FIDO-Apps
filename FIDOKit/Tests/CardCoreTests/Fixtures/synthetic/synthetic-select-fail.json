@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "id": "00000000-0000-4000-8000-00000000A003",
+  "createdAt": "2026-11-19T00:00:00Z",
+  "app": { "name": "FIDOSims", "version": "0.1.0", "build": "1" },
+  "transport": "mock",
+  "device": { "model": "Synthetic", "os": "fixture" },
+  "card": { "label": "Synthetic non-FIDO card", "initialSelectedAID": null },
+  "options": { "lengthForm": "short", "getResponseSupported": false },
+  "events": [
+    { "type": "sessionStarted", "t": 0 },
+    { "type": "cardDetected", "t": 900000000 },
+    { "type": "exchange", "index": 1, "commandIndex": 1, "label": "SELECT_FIDO",
+      "tx": "00A4040008A0000006472F000100", "rx": "", "sw": "6A82",
+      "tStart": 900100000, "tEnd": 909700000, "sensitive": false },
+    { "type": "sessionEnded", "t": 910000000, "reason": "selectFailed" }
+  ]
+}

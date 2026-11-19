@@ -1,0 +1,6 @@
+FIDOSims trace 00000000-0000-4000-8000-00000000A003 | mock | Synthetic fixture | Synthetic non-FIDO card
+01 SELECT_FIDO
+TX 00 A4 04 00 08 A0 00 00 06 47 2F 00 01 00
+RX - | SW 6A82
+RTT 9.600 ms
+Session total 909.700 ms | Card wait 900.000 ms | APDU total 9.600 ms | Host 0.100 ms | 1 exchange
