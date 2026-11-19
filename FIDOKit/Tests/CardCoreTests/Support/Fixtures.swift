@@ -7,6 +7,7 @@ enum Fixtures {
         "synthetic-fido2-getinfo-chained",
         "synthetic-u2f-only",
         "synthetic-select-fail",
+        "synthetic-pcsc-recorder",
     ]
 
     static func url(_ name: String, subdirectory: String = "synthetic", extension ext: String = "json") throws -> URL {

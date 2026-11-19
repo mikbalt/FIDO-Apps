@@ -51,6 +51,13 @@ struct FIDODiagnosticsTests {
         #expect(trace.exchanges.map(\.label) == ["SELECT_FIDO"])
     }
 
+    @Test("PC/SC recorder sample (simulated card) decodes and replays")
+    func pcscSample() async throws {
+        let (trace, fixture) = try await replay("synthetic-pcsc-recorder", subdirectory: "synthetic")
+        #expect(fixture.transport == .pcsc)
+        #expect(trace.endReason == .completed)
+    }
+
     @Test("Reports progress in order")
     func progress() async throws {
         let fixture = try FixtureFiles.trace("synthetic-u2f-only")

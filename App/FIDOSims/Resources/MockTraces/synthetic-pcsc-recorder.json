@@ -1,0 +1,74 @@
+{
+  "schemaVersion": 1,
+  "id": "A9A65ED2-F33C-4547-A95A-07E3EBB8054C",
+  "createdAt": "2026-11-19T09:40:45Z",
+  "app": {
+    "name": "fidosims-pc-baseline",
+    "version": "0.1.0",
+    "build": "1"
+  },
+  "transport": "pcsc",
+  "device": {
+    "model": "Simulated reader",
+    "os": "macOS 27.2.1"
+  },
+  "card": {
+    "label": "Synthetic PC/SC sample",
+    "initialSelectedAID": null
+  },
+  "options": {
+    "lengthForm": "short",
+    "getResponseSupported": false
+  },
+  "events": [
+    {
+      "type": "sessionStarted",
+      "t": 0
+    },
+    {
+      "type": "cardDetected",
+      "t": 51711666
+    },
+    {
+      "type": "exchange",
+      "index": 1,
+      "commandIndex": 1,
+      "label": "SELECT_FIDO",
+      "tx": "00A4040008A0000006472F000100",
+      "rx": "4649444F5F325F30",
+      "sw": "9000",
+      "tStart": 51744958,
+      "tEnd": 59985291,
+      "sensitive": false
+    },
+    {
+      "type": "exchange",
+      "index": 2,
+      "commandIndex": 2,
+      "label": "GET_INFO",
+      "tx": "80100000010400",
+      "rx": "00A1018266553246",
+      "sw": "610C",
+      "tStart": 60004583,
+      "tEnd": 68159583,
+      "sensitive": false
+    },
+    {
+      "type": "exchange",
+      "index": 3,
+      "commandIndex": 2,
+      "label": "GET_INFO",
+      "tx": "00C000000C",
+      "rx": "5F5632684649444F5F325F30",
+      "sw": "9000",
+      "tStart": 68172583,
+      "tEnd": 78199583,
+      "sensitive": false
+    },
+    {
+      "type": "sessionEnded",
+      "t": 78220000,
+      "reason": "completed"
+    }
+  ]
+}
