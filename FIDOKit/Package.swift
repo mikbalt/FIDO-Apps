@@ -1,0 +1,24 @@
+// swift-tools-version: 6.0
+import PackageDescription
+
+let package = Package(
+    name: "FIDOKit",
+    platforms: [.iOS(.v17), .macOS(.v14)],
+    products: [
+        .library(name: "FIDOKit", targets: ["FIDOKit"]),
+    ],
+    targets: [
+        // Pure Swift: APDU model, ISO 7816 channel, transport contract, traces, mock transport.
+        .target(name: "CardCore"),
+        // CoreNFC transport (iOS only) and diagnostics scenarios. Re-exports CardCore.
+        .target(name: "FIDOKit", dependencies: ["CardCore"]),
+        .testTarget(
+            name: "CardCoreTests",
+            dependencies: ["CardCore"],
+            resources: [.copy("Fixtures")]
+        ),
+        // Loads fixtures from CardCoreTests/Fixtures via #filePath, so there is a single copy.
+        .testTarget(name: "FIDOKitTests", dependencies: ["FIDOKit"]),
+    ],
+    swiftLanguageModes: [.v6]
+)

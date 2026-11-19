@@ -1,0 +1,12 @@
+// Shared build settings for the FIDOSims app project.
+
+// Placeholder values so the project builds (unsigned) without local configuration.
+// Real values live in Signing.local.xcconfig, which is gitignored.
+BUNDLE_ID_PREFIX = com.example
+DEVELOPMENT_TEAM =
+CODE_SIGN_STYLE = Automatic
+
+SWIFT_VERSION = 6.0
+SWIFT_STRICT_CONCURRENCY = complete
+
+#include? "Signing.local.xcconfig"
