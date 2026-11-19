@@ -5,8 +5,9 @@ public enum MockTransportError: Error, Equatable, Sendable {
     case unexpectedCommand(index: Int, label: String, expected: Data, actual: Data)
     /// A command was sent after the script ran out.
     case scriptExhausted(actual: Data)
-    /// The fixture has redacted exchanges, so it cannot be replayed.
-    case redactedFixture(index: Int)
+    /// The trace has redacted exchanges, whose bytes are not in the file, so it cannot be replayed.
+    /// `index` and `label` are those of the first redacted exchange.
+    case redactedTrace(redactedCount: Int, index: Int, label: String)
     case notOpen
 }
 
@@ -18,8 +19,10 @@ extension MockTransportError: LocalizedError {
                 + "Expected: \(Hex.format(expected))\nActual:   \(Hex.format(actual))"
         case let .scriptExhausted(actual):
             "Mock script has no more exchanges. Unexpected command: \(Hex.format(actual))"
-        case let .redactedFixture(index):
-            "Exchange \(index) of the fixture is redacted and cannot be replayed."
+        case let .redactedTrace(redactedCount, index, label):
+            "This trace cannot be replayed: \(redactedCount) exchange\(redactedCount == 1 ? " is" : "s are") redacted, "
+                + "starting with exchange \(index) (\(label)), so the bytes to compare and answer with are missing. "
+                + "Replay needs an unredacted trace."
         case .notOpen:
             "The mock session is not open."
         }

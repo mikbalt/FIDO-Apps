@@ -17,8 +17,8 @@ public struct ExchangeEvent: Sendable, Equatable, Identifiable {
     /// Nanoseconds since `sessionStarted`, immediately after the I/O call returned.
     public var tEnd: Int64
     public var sensitive: Bool
-    /// `tx` and `rx` were replaced by zero bytes of the same length. Not encoded as its own field:
-    /// redacted exchanges are written with `<redacted N bytes>` placeholders instead of hex.
+    /// `tx` and `rx` were replaced by zero bytes of the same length. In JSON, a redacted exchange has
+    /// `"tx": null`, `"rx": null`, `txLength`, `rxLength` and `"redacted": true`.
     public var isRedacted: Bool
 
     public init(
@@ -79,7 +79,7 @@ public struct ExchangeEvent: Sendable, Equatable, Identifiable {
 
 extension ExchangeEvent: Codable {
     private enum CodingKeys: String, CodingKey {
-        case index, commandIndex, label, tx, rx, sw, tStart, tEnd, sensitive
+        case index, commandIndex, label, tx, rx, txLength, rxLength, redacted, sw, tStart, tEnd, sensitive
     }
 
     public init(from decoder: any Decoder) throws {
@@ -91,14 +91,22 @@ extension ExchangeEvent: Codable {
         tStart = try container.decode(Int64.self, forKey: .tStart)
         tEnd = try container.decode(Int64.self, forKey: .tEnd)
         sensitive = try container.decode(Bool.self, forKey: .sensitive)
+        isRedacted = try container.decodeIfPresent(Bool.self, forKey: .redacted) ?? false
 
-        let txString = try container.decode(String.self, forKey: .tx)
-        let rxString = try container.decode(String.self, forKey: .rx)
-        let txRedacted = Redaction.byteCount(fromPlaceholder: txString)
-        let rxRedacted = Redaction.byteCount(fromPlaceholder: rxString)
-        isRedacted = txRedacted != nil || rxRedacted != nil
-        tx = try txRedacted.map { Data(count: $0) } ?? Hex.parse(txString)
-        rx = try rxRedacted.map { Data(count: $0) } ?? Hex.parse(rxString)
+        if isRedacted {
+            for key in [CodingKeys.tx, .rx] {
+                guard try container.decodeNil(forKey: key) else {
+                    throw DecodingError.dataCorruptedError(
+                        forKey: key, in: container, debugDescription: "A redacted exchange must have null bytes."
+                    )
+                }
+            }
+            tx = Data(count: try Self.decodeLength(.txLength, in: container))
+            rx = Data(count: try Self.decodeLength(.rxLength, in: container))
+        } else {
+            tx = try Hex.parse(container.decode(String.self, forKey: .tx))
+            rx = try Hex.parse(container.decode(String.self, forKey: .rx))
+        }
     }
 
     public func encode(to encoder: any Encoder) throws {
@@ -106,15 +114,27 @@ extension ExchangeEvent: Codable {
         try container.encode(index, forKey: .index)
         try container.encode(commandIndex, forKey: .commandIndex)
         try container.encode(label, forKey: .label)
-        try container.encode(encodedBytes(tx), forKey: .tx)
-        try container.encode(encodedBytes(rx), forKey: .rx)
+        if isRedacted {
+            try container.encodeNil(forKey: .tx)
+            try container.encodeNil(forKey: .rx)
+            try container.encode(tx.count, forKey: .txLength)
+            try container.encode(rx.count, forKey: .rxLength)
+            try container.encode(true, forKey: .redacted)
+        } else {
+            try container.encode(Hex.compact(tx), forKey: .tx)
+            try container.encode(Hex.compact(rx), forKey: .rx)
+        }
         try container.encode(sw, forKey: .sw)
         try container.encode(tStart, forKey: .tStart)
         try container.encode(tEnd, forKey: .tEnd)
         try container.encode(sensitive, forKey: .sensitive)
     }
 
-    private func encodedBytes(_ bytes: Data) -> String {
-        isRedacted ? Redaction.placeholder(byteCount: bytes.count) : Hex.compact(bytes)
+    private static func decodeLength(_ key: CodingKeys, in container: KeyedDecodingContainer<CodingKeys>) throws -> Int {
+        let length = try container.decode(Int.self, forKey: key)
+        guard length >= 0 else {
+            throw DecodingError.dataCorruptedError(forKey: key, in: container, debugDescription: "Negative length.")
+        }
+        return length
     }
 }

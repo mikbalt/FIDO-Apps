@@ -53,7 +53,7 @@ from `ContinuousClock` on iOS and `time.perf_counter_ns()` on the PC.
 |---|---|
 | `sessionStarted` | `t` (always `0`) |
 | `cardDetected` | `t` |
-| `exchange` | `index`, `commandIndex`, `label`, `tx`, `rx`, `sw`, `tStart`, `tEnd`, `sensitive` |
+| `exchange` | `index`, `commandIndex`, `label`, `tx`, `rx`, `sw`, `tStart`, `tEnd`, `sensitive`; when redacted also `txLength`, `rxLength`, `redacted` |
 | `sessionEnded` | `t`, `reason` |
 
 `exchange` fields:
@@ -67,16 +67,57 @@ from `ContinuousClock` on iOS and `time.perf_counter_ns()` on the PC.
 - `tStart` / `tEnd`: taken by the transport immediately before and after the I/O call.
 - `sensitive`: the exchange carries secrets (ClientPIN, from brief 02 on).
 
-`reason` values written today: `completed`, `selectFailed`, `ctap1Only` (GetInfo returned `6D00`),
-`getInfoFailed`, `cancelled`, `error`. Readers must accept unknown values.
+#### GET RESPONSE is always short form
+
+The follow-up commands the channel sends on its own, `GET RESPONSE` (`00 C0 00 00 xx`, after `61xx`)
+and `NFCCTAP_GETRESPONSE` (`80 11 00 00 00`, after `9100`), are **always sent in short form**, whatever
+`options.lengthForm` the run uses. `lengthForm` applies to the logical commands only (`SELECT_FIDO` is
+also always short). Both the app and the PC recorder follow this rule, so their traces replay against
+each other.
+
+#### `sessionEnded.reason`
+
+A closed set. Each `CardError` case maps to exactly one value.
+
+| `reason` | Meaning |
+|---|---|
+| `completed` | The scenario ran to the end |
+| `selectFailed` | SELECT did not return `9000` with a known version string; later commands skipped |
+| `ctap1Only` | GetInfo returned `6D00` (CTAP1/U2F-only card) |
+| `getInfoFailed` | GetInfo returned another SW, or a non-zero CTAP status byte |
+| `cancelled` | The run's task was cancelled (the app's Cancel button) |
+| `userCancelled` | `CardError.userCancelled`: the user dismissed the system NFC sheet |
+| `sessionTimeout` | `CardError.sessionTimeout`: the system ended the reader session (iOS 60 s limit) |
+| `tagConnectionLost` | `CardError.tagConnectionLost` |
+| `nfcUnavailable` | `CardError.nfcUnavailable` |
+| `invalidAPDU` | `CardError.invalidAPDU`: the command bytes could not be wrapped as an APDU |
+| `notConnected` | `CardError.notConnected` |
+| `transportError` | `CardError.underlying`: any other transport error |
+| `error` | Any other error: channel protocol errors (chaining, `9100` timeout), `MockTransport` mismatch |
+
+The PC recorder writes only `completed`, `selectFailed`, `ctap1Only`, `getInfoFailed` and `error`.
+**Readers must accept unknown values**, so later versions can add some without breaking older readers.
+The Swift decoder keeps them as `SessionEndReason.unknown(raw)` and writes them back unchanged.
 
 ### Redaction
 
-Exports redact sensitive exchanges by default (`redactSensitive = true`). In a redacted export the
-`tx` and `rx` of a sensitive exchange are written as `"<redacted N bytes>"`, where N is the byte count.
-`sw` and the times are kept. Redacted traces decode, but `MockTransport` refuses to replay them.
+JSON exports redact sensitive exchanges by default (`redactSensitive = true`). A redacted exchange has
+`"tx": null` and `"rx": null`, the byte counts in `txLength` and `rxLength`, and `"redacted": true`.
+`sw`, the times and `sensitive` are kept. A non-redacted exchange has no `txLength`, `rxLength` or
+`redacted` field. JSON never contains the `<redacted N bytes>` placeholder: that is only for the text
+log and the Safe view.
 
-## Metrics (provisional, pending the BU's answer)
+```json
+{ "type": "exchange", "index": 3, "commandIndex": 3, "label": "CLIENT_PIN",
+  "tx": null, "rx": null, "txLength": 85, "rxLength": 2, "redacted": true,
+  "sw": "9000", "tStart": 1530100000, "tEnd": 1561300000, "sensitive": true }
+```
+
+Redacted traces decode, so they can be inspected and their metrics computed, but `MockTransport` refuses
+to replay a trace with any redacted exchange (`MockTransportError.redactedTrace`), because the bytes to
+compare and answer with are missing.
+
+## Metrics
 
 | Metric | Definition |
 |---|---|
@@ -87,7 +128,10 @@ Exports redact sensitive exchanges by default (`redactSensitive = true`). In a r
 | Per logical command | Σ RTT of its physical exchanges, plus the exchange count |
 
 Values are displayed in milliseconds with 3 decimals, e.g. `12.400 ms` (rounded to the microsecond).
-`sessionEnded.t` is not used by any metric.
+`sessionEnded.t` is not used by any metric. `sessionTotal` deliberately ends at the last exchange: ending
+at `sessionEnded` would include the iOS "Done" alert and the sheet dismissal, which are not part of the
+transaction. These definitions are fixed; the BU only chooses which one is the headline "transaction
+total". Session close will get its own segment, `postSession`, in trace v2 (brief 02).
 
 > **iOS note.** CoreNFC sends its own SELECT for the first matching AID from
 > `com.apple.developer.nfc.readersession.iso7816.select-identifiers` during discovery, before handing

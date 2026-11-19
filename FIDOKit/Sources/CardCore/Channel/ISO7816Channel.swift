@@ -95,6 +95,7 @@ public final class ISO7816Channel: Sendable {
         }
 
         // 3 and 5. Collect GET RESPONSE data and follow NFCCTAP status updates until a final SW.
+        // Both follow-up commands are always short form, whatever `form` is (docs/trace-format.md).
         var data = Data()
         var statusDeadline: ContinuousClock.Instant?
         while true {

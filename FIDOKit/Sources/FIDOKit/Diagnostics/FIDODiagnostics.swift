@@ -12,7 +12,8 @@ public enum FIDODiagnostics {
     /// - `getInfoFailed`: GetInfo returned another SW, or a non-zero CTAP status byte.
     ///
     /// - Throws: Errors from `open` (no card was connected, so there is no trace), or a
-    ///   `DiagnosticsFailure` with the partial trace for errors and cancellation after connecting.
+    ///   `DiagnosticsFailure` with the partial trace for errors and cancellation after connecting. Its
+    ///   trace ends with `cancelled`, the reason mapped from the `CardError`, or `error`.
     public static func runSelectAndGetInfo(
         transport: any CardTransport,
         options: DiagnosticsOptions = DiagnosticsOptions(),
@@ -46,11 +47,20 @@ public enum FIDODiagnostics {
             return await recorder.trace
         } catch {
             let isCancellation = DiagnosticsFailure.isCancellation(error)
-            let reason: SessionEndReason = isCancellation ? .cancelled : .error
+            let reason = endReason(for: error)
             await transport.close(errorMessage: isCancellation ? nil : error.localizedDescription)
             await recorder.end(reason: reason)
             progress(.finished(reason))
             throw DiagnosticsFailure(underlying: error, trace: await recorder.trace)
+        }
+    }
+
+    /// `cancelled` for task cancellation, one reason per `CardError` case, `error` for anything else.
+    static func endReason(for error: any Error) -> SessionEndReason {
+        switch error {
+        case is CancellationError: .cancelled
+        case let cardError as CardError: SessionEndReason(cardError)
+        default: .error
         }
     }
 

@@ -176,6 +176,8 @@ class Channel:
             le = (sw & 0xFF) or 256
             rx, sw = self._exchange(index, label, encode_apdu(cla, ins, p1, p2, data, le, form))
 
+        # GET RESPONSE and NFCCTAP_GETRESPONSE are always short form, whatever the run's form
+        # (docs/trace-format.md).
         result = b""
         deadline = None
         while True:

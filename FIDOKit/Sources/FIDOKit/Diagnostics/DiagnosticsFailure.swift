@@ -3,7 +3,7 @@ import Foundation
 /// A diagnostics run failed after the card was connected. Carries the partial trace.
 public struct DiagnosticsFailure: Error {
     public let underlying: any Error
-    /// Every exchange completed before the failure, ended with reason `cancelled` or `error`.
+    /// Every exchange completed before the failure, ended with `cancelled`, a `CardError` reason or `error`.
     public let trace: Trace
 
     public init(underlying: any Error, trace: Trace) {

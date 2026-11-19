@@ -57,12 +57,15 @@ struct MockTransportTests {
         }
     }
 
-    @Test("Refuses redacted fixtures")
-    func redactedFixture() throws {
-        let trace = try TraceCodingTests.traceWithSensitiveExchange().redactingSensitive()
-        #expect(throws: MockTransportError.redactedFixture(index: 1)) {
+    @Test("Refuses traces with redacted exchanges, with a clear error")
+    func redactedTrace() throws {
+        let json = try TraceCodingTests.traceWithSensitiveExchange().jsonData(redactSensitive: true)
+        let trace = try Trace(jsonData: json)
+        let error = #expect(throws: MockTransportError.redactedTrace(redactedCount: 1, index: 1, label: "SCRIPT")) {
             try MockTransport(trace: trace)
         }
+        #expect(error?.localizedDescription.contains("cannot be replayed") == true)
+        #expect(error?.localizedDescription.contains("exchange 1 (SCRIPT)") == true)
     }
 
     @Test("Realtime mode waits for the recorded durations")

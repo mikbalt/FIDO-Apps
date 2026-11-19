@@ -16,10 +16,12 @@ public actor MockTransport: CardTransport {
     private var sessionStartedAt: ContinuousClock.Instant?
     private var position = 0
 
+    /// - Throws: `MockTransportError.redactedTrace` if any exchange is redacted.
     public init(trace: Trace, realtime: Bool = false) throws {
         let exchanges = trace.exchanges
-        if let redacted = exchanges.first(where: \.isRedacted) {
-            throw MockTransportError.redactedFixture(index: redacted.index)
+        let redacted = exchanges.filter(\.isRedacted)
+        if let first = redacted.first {
+            throw MockTransportError.redactedTrace(redactedCount: redacted.count, index: first.index, label: first.label)
         }
         let start = trace.sessionStartedTime ?? 0
         self.script = exchanges.map { exchange in

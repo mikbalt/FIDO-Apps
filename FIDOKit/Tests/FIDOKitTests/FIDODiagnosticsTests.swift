@@ -102,4 +102,23 @@ struct FIDODiagnosticsTests {
         #expect(failure.trace.endReason == .cancelled)
         #expect(failure.trace.exchanges.count < fixture.exchanges.count)
     }
+
+    @Test(
+        "Each CardError ends the trace with its own reason",
+        arguments: [
+            (CardError.userCancelled, SessionEndReason.userCancelled),
+            (.sessionTimeout, .sessionTimeout),
+            (.tagConnectionLost, .tagConnectionLost),
+            (.nfcUnavailable, .nfcUnavailable),
+            (.invalidAPDU, .invalidAPDU),
+            (.notConnected, .notConnected),
+            (.underlying(CocoaError(.fileReadUnknown)), .transportError),
+        ]
+    )
+    func cardErrorReason(error: CardError, reason: SessionEndReason) async throws {
+        let failure = try #require(await #expect(throws: DiagnosticsFailure.self) {
+            try await FIDODiagnostics.runSelectAndGetInfo(transport: FailingTransport(error: error))
+        })
+        #expect(failure.trace.endReason == reason)
+    }
 }
