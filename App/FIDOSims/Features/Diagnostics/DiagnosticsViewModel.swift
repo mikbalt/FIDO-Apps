@@ -36,6 +36,9 @@ final class DiagnosticsViewModel {
     var selectedTraceID: Trace.ID? {
         didSet { updateSelection() }
     }
+    /// The trace of the most recent run. `nil` while a run is in progress, or if it ended before a card
+    /// connected (no trace).
+    private(set) var latestTraceID: Trace.ID?
     /// Cached from `history` and `selectedTraceID`, so result views don't depend on the whole history.
     private(set) var selectedTrace: Trace?
     private(set) var selectedMetrics: TraceMetrics?
@@ -66,10 +69,18 @@ final class DiagnosticsViewModel {
         !state.isRunning && (transportChoice == .nfc || selectedFixture != nil)
     }
 
+    /// The results on screen belong to a History trace, not to the most recent run.
+    var isViewingHistory: Bool {
+        selectedTrace != nil && selectedTraceID != latestTraceID
+    }
+
     // MARK: Actions
 
     func run() {
         guard canRun else { return }
+        // The previous results must not stay on screen next to the new run's state.
+        latestTraceID = nil
+        selectedTraceID = nil
 
         let selection: TransportSelection
         var options = DiagnosticsOptions(lengthForm: lengthForm, cardLabel: cardLabel)
@@ -136,6 +147,11 @@ final class DiagnosticsViewModel {
         runTask?.cancel()
     }
 
+    /// Leaves History and shows the most recent run again.
+    func showLatest() {
+        selectedTraceID = latestTraceID
+    }
+
     // MARK: Private
 
     private func apply(_ progress: DiagnosticsProgress) {
@@ -165,6 +181,7 @@ final class DiagnosticsViewModel {
         runTask = nil
         guard let trace else { return }
         history = Array(([trace] + history).prefix(Self.historyLimit))
+        latestTraceID = trace.id
         selectedTraceID = trace.id
     }
 
