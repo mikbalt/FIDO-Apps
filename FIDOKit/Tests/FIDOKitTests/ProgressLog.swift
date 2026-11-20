@@ -1,15 +1,13 @@
 import FIDOKit
-import Foundation
+import os
 
-/// Collects diagnostics progress callbacks, which may arrive from any task.
-actor ProgressLog {
-    private(set) var events: [DiagnosticsProgress] = []
+/// Collects scenario steps synchronously, in the order they are reported.
+final class ProgressLog: Sendable {
+    private let steps = OSAllocatedUnfairLock<[ScenarioStep]>(initialState: [])
 
-    func append(_ event: DiagnosticsProgress) {
-        events.append(event)
-    }
+    var events: [ScenarioStep] { steps.withLock { $0 } }
 
-    nonisolated func callback() -> @Sendable (DiagnosticsProgress) -> Void {
-        { event in Task { await self.append(event) } }
+    func callback() -> @Sendable (ScenarioStep) -> Void {
+        { step in self.steps.withLock { $0.append(step) } }
     }
 }
