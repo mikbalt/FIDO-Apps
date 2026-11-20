@@ -1,20 +1,15 @@
 import CardCore
 import Foundation
 
-/// RFC 8949 §8 diagnostic notation, e.g. `{1: ["FIDO_2_0", "FIDO_2_1"], 3: h'2FC0579F…'}`.
-///
-/// The single-line form is pinned by `tools/vectors/cbor.json`, whose `diag` strings the Python generator
-/// writes in the same style: `, ` and `: ` separators, uppercase hex, JSON-style string escapes.
+/// A plain-text dump of a CBOR value in RFC 8949 §8 diagnostic notation,
+/// e.g. `{1: ["FIDO_2_0", "FIDO_2_1"], 3: h'2FC0579F…'}`.
 public enum CBORDiagnostic {
     /// - Parameters:
-    ///   - schema: Annotates known map keys, e.g. `1 /versions/: [...]`.
     ///   - multiline: Puts each array element and map entry on its own indented line.
     ///   - maxBytes: Byte strings longer than this are cut and end with `…`. `nil` prints them in full.
-    public static func format(
-        _ value: CBORValue, schema: CBORSchema? = nil, multiline: Bool = false, maxBytes: Int? = nil
-    ) -> String {
+    public static func format(_ value: CBORValue, multiline: Bool = false, maxBytes: Int? = nil) -> String {
         var printer = Printer(multiline: multiline, maxBytes: maxBytes)
-        printer.write(value, schema: schema, indent: 0)
+        printer.write(value, indent: 0)
         return printer.output
     }
 
@@ -23,7 +18,7 @@ public enum CBORDiagnostic {
         let maxBytes: Int?
         var output = ""
 
-        mutating func write(_ value: CBORValue, schema: CBORSchema?, indent: Int) {
+        mutating func write(_ value: CBORValue, indent: Int) {
             switch value {
             case let .unsigned(number):
                 output += String(number)
@@ -40,17 +35,14 @@ public enum CBORDiagnostic {
                 output += quoted(text)
             case let .array(items):
                 writeContainer(open: "[", close: "]", count: items.count, indent: indent) { printer, index, indent in
-                    printer.write(items[index], schema: nil, indent: indent)
+                    printer.write(items[index], indent: indent)
                 }
             case let .map(entries):
                 writeContainer(open: "{", close: "}", count: entries.count, indent: indent) { printer, index, indent in
                     let entry = entries[index]
-                    printer.write(entry.key, schema: nil, indent: indent)
-                    if let name = schema?.names[entry.key] {
-                        printer.output += " /\(name)/"
-                    }
+                    printer.write(entry.key, indent: indent)
                     printer.output += ": "
-                    printer.write(entry.value, schema: schema?.children[entry.key], indent: indent)
+                    printer.write(entry.value, indent: indent)
                 }
             case let .bool(flag):
                 output += flag ? "true" : "false"

@@ -19,11 +19,8 @@ let package = Package(
             dependencies: ["CardCore"],
             resources: [.copy("Fixtures")]
         ),
-        .testTarget(
-            name: "CTAPTests",
-            dependencies: ["CTAP"],
-            resources: [.copy("Fixtures")]
-        ),
+        // Reads the shared trace fixtures from CardCoreTests/Fixtures via #filePath.
+        .testTarget(name: "CTAPTests", dependencies: ["CTAP"]),
         // Loads fixtures from CardCoreTests/Fixtures via #filePath, so there is a single copy.
         .testTarget(name: "FIDOKitTests", dependencies: ["FIDOKit"]),
     ],

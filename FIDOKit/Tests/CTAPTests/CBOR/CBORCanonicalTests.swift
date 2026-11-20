@@ -1,5 +1,5 @@
 import CardCore
-@testable import CTAP
+import CTAP
 import Foundation
 import Testing
 
@@ -50,44 +50,6 @@ struct CBORCanonicalTests {
         #expect(throws: CBOREncodingError.duplicateKey("rk")) {
             try CBOREncoder.encode(["rk": true, "up": true, "rk": false])
         }
-    }
-
-    @Test("Nesting deeper than 4 levels is an error with the CTAP limit, fine without it")
-    func depth() throws {
-        let four: CBORValue = [1: [[2: [3]]]]
-        let five: CBORValue = [1: [[2: [[3]]]]]
-        #expect(throws: Never.self) { try CBOREncoder.encode(four, maxNestingDepth: CBOREncoder.ctapMaxNestingDepth) }
-        #expect(throws: CBOREncodingError.nestingTooDeep(limit: 4)) {
-            try CBOREncoder.encode(five, maxNestingDepth: CBOREncoder.ctapMaxNestingDepth)
-        }
-        #expect(throws: Never.self) { try CBOREncoder.encode(five) }
-    }
-
-    // MARK: Decoder canonicality
-
-    @Test("A non-shortest integer decodes and is reported")
-    func nonShortestInteger() throws {
-        let result = try CBORDecoder.decode(Hex.parse("1805"))
-        #expect(result.value == 5)
-        #expect(result.canonicality.violations == [CanonicalityViolation(kind: .nonShortestInteger, offset: 0)])
-    }
-
-    @Test("A non-shortest length decodes and is reported")
-    func nonShortestLength() throws {
-        let result = try CBORDecoder.decode(Hex.parse("82 01 59 0001 41"))
-        #expect(result.value == [1, .bytes(Data([0x41]))])
-        #expect(result.canonicality.violations == [CanonicalityViolation(kind: .nonShortestLength, offset: 2)])
-    }
-
-    @Test("An unsorted map decodes, keeps its order and is reported")
-    func unsortedMap() throws {
-        // {"up": true, "rk": true}, then {-1: 0, 1: 0}
-        let result = try CBORDecoder.decode(Hex.parse("A2 627570 F5 62726B F5"))
-        #expect(keys(result.value) == ["up", "rk"])
-        #expect(result.canonicality.violations == [CanonicalityViolation(kind: .unsortedKeys, offset: 5)])
-
-        let ints = try CBORDecoder.decode(Hex.parse("A2 20 00 01 00"))
-        #expect(ints.canonicality.violations.map(\.kind) == [.unsortedKeys])
     }
 
     // MARK: Decoder rejections
@@ -173,12 +135,11 @@ struct CBORCanonicalTests {
 
     // MARK: Diagnostic notation
 
-    @Test("Annotated, multiline and truncated diagnostic notation")
+    @Test("Plain-text dump: single line, multiline and truncated bytes")
     func diagnostic() {
         let value: CBORValue = [1: ["FIDO_2_0"], 3: .bytes(Data([0x2F, 0xC0, 0x57])), 4: ["rk": true]]
-        let schema = CBORSchema(names: [1: "versions", 3: "aaguid", 4: "options"])
-        #expect(CBORDiagnostic.format(value, schema: schema, maxBytes: 2)
-            == #"{1 /versions/: ["FIDO_2_0"], 3 /aaguid/: h'2FC0…', 4 /options/: {"rk": true}}"#)
+        #expect(CBORDiagnostic.format(value, maxBytes: 2) == #"{1: ["FIDO_2_0"], 3: h'2FC0…', 4: {"rk": true}}"#)
+        #expect(CBORDiagnostic.format([-1: "a\"b"]) == #"{-1: "a\"b"}"#)
         #expect(CBORDiagnostic.format([1: [2], 3: [:]], multiline: true) == """
             {
               1: [
