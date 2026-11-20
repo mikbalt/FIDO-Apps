@@ -12,8 +12,11 @@ let package = Package(
         .target(name: "CardCore"),
         // Pure Swift: canonical CBOR, CTAP client, command models (GetInfo, ...).
         .target(name: "CTAP", dependencies: ["CardCore"]),
-        // CoreNFC transport (iOS only) and diagnostics scenarios. Re-exports CardCore and CTAP.
-        .target(name: "FIDOKit", dependencies: ["CardCore", "CTAP"]),
+        // PIN/UV auth protocol 2 (CryptoKit + CommonCrypto) and authenticatorClientPIN.
+        .target(name: "PinUvAuth", dependencies: ["CTAP"]),
+        // CoreNFC transport (iOS only), the FIDOSimulator facade and its scenarios.
+        // Re-exports CardCore, CTAP and PinUvAuth.
+        .target(name: "FIDOKit", dependencies: ["CardCore", "CTAP", "PinUvAuth"]),
         .testTarget(
             name: "CardCoreTests",
             dependencies: ["CardCore"],
@@ -21,8 +24,11 @@ let package = Package(
         ),
         // Reads the shared trace fixtures from CardCoreTests/Fixtures via #filePath.
         .testTarget(name: "CTAPTests", dependencies: ["CTAP"]),
+        // Test-only: a fake authenticator that speaks ClientPIN, for scenario tests without a card.
+        .target(name: "FIDOTestSupport", dependencies: ["PinUvAuth"], path: "Tests/FIDOTestSupport"),
+        .testTarget(name: "PinUvAuthTests", dependencies: ["PinUvAuth", "FIDOTestSupport"]),
         // Loads fixtures from CardCoreTests/Fixtures via #filePath, so there is a single copy.
-        .testTarget(name: "FIDOKitTests", dependencies: ["FIDOKit"]),
+        .testTarget(name: "FIDOKitTests", dependencies: ["FIDOKit", "FIDOTestSupport"]),
     ],
     swiftLanguageModes: [.v6]
 )
