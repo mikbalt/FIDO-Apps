@@ -2,11 +2,11 @@ import FIDOKit
 import SwiftUI
 
 /// The last runs, newest first. Selecting one shows its results.
-struct DiagnosticsHistorySection: View {
-    let model: DiagnosticsViewModel
+struct ScenarioHistorySection: View {
+    let model: ScenarioRunModel
 
     var body: some View {
-        Section("History (last \(DiagnosticsViewModel.historyLimit))") {
+        Section("History (last \(ScenarioRunModel.historyLimit))") {
             ForEach(model.history) { trace in
                 Button {
                     model.selectedTraceID = trace.id
@@ -14,7 +14,8 @@ struct DiagnosticsHistorySection: View {
                     TraceSummaryRowView(
                         title: trace.card.label,
                         subtitle: "\(trace.createdAt.formatted(date: .omitted, time: .standard)) · "
-                            + (trace.endReason?.displayName ?? "In progress"),
+                            + (trace.outcome.map { $0.error?.name ?? $0.status.rawValue.capitalized }
+                                ?? trace.endReason?.displayName ?? "In progress"),
                         detail: TraceMetrics(trace: trace).sessionTotal.map(TimingFormat.milliseconds) ?? "—",
                         isSelected: trace.id == model.selectedTraceID
                     )

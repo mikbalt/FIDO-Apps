@@ -1,22 +1,27 @@
 import FIDOKit
 import Foundation
 
-/// Builds the app's object graph. The only place that knows concrete transport types.
+/// Builds the app's object graph. The only place that knows concrete transport and store types.
 @MainActor
 final class AppContainer {
-    let isNFCAvailable: Bool
-    let mockFixtures: [MockFixture]
+    let environment: LabEnvironment
 
     init(bundle: Bundle = .main) {
         #if targetEnvironment(simulator)
-        isNFCAvailable = false
+        let isNFCAvailable = false
         #else
-        isNFCAvailable = NFCCardTransport.isAvailable
+        let isNFCAvailable = NFCCardTransport.isAvailable
         #endif
-        mockFixtures = MockFixture.loadAll(from: bundle)
+        environment = LabEnvironment(
+            isNFCAvailable: isNFCAvailable,
+            fixtures: MockFixture.loadAll(from: bundle),
+            makeTransport: Self.makeTransport,
+            pinStore: KeychainPINStore(),
+            onCardReset: { _ in }
+        )
     }
 
-    func makeTransport(_ selection: TransportSelection) throws -> any CardTransport {
+    private static func makeTransport(_ selection: TransportSelection) throws -> any CardTransport {
         switch selection {
         case .nfc:
             #if os(iOS)
@@ -27,13 +32,5 @@ final class AppContainer {
         case let .mock(fixture, realtime):
             return try MockTransport(trace: fixture.trace, realtime: realtime)
         }
-    }
-
-    func makeDiagnosticsViewModel() -> DiagnosticsViewModel {
-        DiagnosticsViewModel(
-            fixtures: mockFixtures,
-            isNFCAvailable: isNFCAvailable,
-            makeTransport: { selection in try self.makeTransport(selection) }
-        )
     }
 }
