@@ -25,3 +25,6 @@ __pycache__/
 .venv/
 venv/
 tools/pc-baseline/traces/
+
+# Claude Code local settings
+.claude/settings.local.json

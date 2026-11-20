@@ -3,7 +3,9 @@
 Internal R&D app that runs FIDO2 (CTAP2) transactions directly against a FIDO NFC card and times
 every APDU command–response. It does not use ASAuthorization or any platform passkey API.
 See [`docs/briefs/README.md`](docs/briefs/README.md) for the plan and the briefs, and
-[`docs/trace-format.md`](docs/trace-format.md) for the trace format.
+[`docs/trace-format.md`](docs/trace-format.md) for the trace format. Status and open work:
+[`docs/PROGRESS.md`](docs/PROGRESS.md) and the GitHub issues. Agents (and humans) start with
+[`AGENTS.md`](AGENTS.md).
 
 | Path | What |
 |---|---|
