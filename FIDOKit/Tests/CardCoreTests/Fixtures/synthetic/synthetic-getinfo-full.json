@@ -1,0 +1,85 @@
+{
+  "schemaVersion": 2,
+  "id": "6F1C2D3E-0000-4000-8000-0000000000C2",
+  "createdAt": "2026-11-20T00:00:00Z",
+  "app": {
+    "name": "FIDOSims",
+    "version": "0.2.0",
+    "build": "1"
+  },
+  "transport": "nfc",
+  "device": {
+    "model": "iPhone16,2",
+    "os": "iOS 26.1"
+  },
+  "scenario": "diagnostics",
+  "outcome": {
+    "status": "success"
+  },
+  "card": {
+    "label": "Synthetic GetInfo",
+    "initialSelectedAID": "A0000006472F0001",
+    "aaguid": "2FC0579F-8113-47EA-B116-BB5A8DB9202A",
+    "versions": [
+      "FIDO_2_0",
+      "FIDO_2_1"
+    ],
+    "firmwareVersion": 66051
+  },
+  "options": {
+    "lengthForm": "short",
+    "getResponseSupported": false
+  },
+  "events": [
+    {
+      "type": "sessionStarted",
+      "t": 0
+    },
+    {
+      "type": "cardDetected",
+      "t": 1500000000
+    },
+    {
+      "type": "exchange",
+      "index": 1,
+      "commandIndex": 1,
+      "label": "SELECT_FIDO",
+      "tx": "00A4040008A0000006472F000100",
+      "rx": "4649444F5F325F30",
+      "sw": "9000",
+      "tStart": 1500100000,
+      "tEnd": 1512500000,
+      "sensitive": false
+    },
+    {
+      "type": "exchange",
+      "index": 2,
+      "commandIndex": 2,
+      "label": "GET_INFO",
+      "tx": "80100000010400",
+      "rx": "00AE0182684649444F5F325F30684649444F5F325F3102826B6372656450726F746563746B686D61632D73656372657403502FC0579F811347EAB116BB5A8DB9202A04A662726BF5627570F568637265644D676D74F569636C69656E7450696EF56E70696E557641757468546F6B656EF5706D616B654372656455764E6F7452",
+      "sw": "613D",
+      "tStart": 1513000000,
+      "tEnd": 1553000000,
+      "sensitive": false
+    },
+    {
+      "type": "exchange",
+      "index": 3,
+      "commandIndex": 2,
+      "label": "GET_INFO",
+      "tx": "00C000003D",
+      "rx": "7164F5051904B00682020107080818800981636E66630A81A263616C672664747970656A7075626C69632D6B65790D060E1A000102031418191830182A",
+      "sw": "9000",
+      "tStart": 1553200000,
+      "tEnd": 1573200000,
+      "sensitive": false,
+      "ctapStatus": "00"
+    },
+    {
+      "type": "sessionEnded",
+      "t": 1600000000,
+      "reason": "completed"
+    }
+  ]
+}

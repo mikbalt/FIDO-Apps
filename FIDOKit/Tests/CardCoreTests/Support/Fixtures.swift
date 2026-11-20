@@ -8,7 +8,7 @@ enum Fixtures {
         "synthetic-u2f-only",
         "synthetic-select-fail",
         "synthetic-pcsc-recorder",
-        "synthetic-v2-timeline",
+        "synthetic-getinfo-full",
     ]
 
     /// v1 fixtures, written before trace v2.

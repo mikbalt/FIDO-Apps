@@ -3,7 +3,7 @@ import Foundation
 /// Metadata plus ordered events for one session. See `docs/trace-format.md`.
 public struct Trace: Sendable, Equatable, Identifiable {
     public static let currentSchemaVersion = 2
-    /// Versions this build reads. v1 traces decode unchanged and keep `sessionStarted` as their time reference.
+    /// Versions this build reads. v1 traces decode unchanged.
     public static let supportedSchemaVersions = 1...2
 
     public var schemaVersion: Int
@@ -53,34 +53,10 @@ public struct Trace: Sendable, Equatable, Identifiable {
         }
     }
 
-    public var commands: [CommandEvent] {
-        events.compactMap { event in
-            if case let .command(command) = event { command } else { nil }
-        }
-    }
-
-    public var hostSteps: [HostStepEvent] {
-        events.compactMap { event in
-            if case let .hostStep(step) = event { step } else { nil }
-        }
-    }
-
     public var warnings: [WarningEvent] {
         events.compactMap { event in
             if case let .warning(warning) = event { warning } else { nil }
         }
-    }
-
-    public var scenarioStartedTime: Int64? {
-        events.lazy.compactMap { event in
-            if case let .scenarioStarted(t) = event { t } else { nil }
-        }.first
-    }
-
-    public var scenarioEndedTime: Int64? {
-        events.lazy.compactMap { event in
-            if case let .scenarioEnded(t) = event { t } else { nil }
-        }.first
     }
 
     public var sessionStartedTime: Int64? {

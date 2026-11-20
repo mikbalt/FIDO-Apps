@@ -1,10 +1,15 @@
-# Trace format (schema version 1)
+# Trace format (schema version 2)
 
 **[CONTRACT]** Owned by Ikbal. Implemented by `CardCore/Trace` (Swift) and
 `tools/pc-baseline/record_trace.py` (Python). Change only after agreement.
 
 A trace records one card session: metadata plus ordered events. The same format is used for app
 exports, PC/SC baseline recordings and `MockTransport` fixtures.
+
+**Versions.** The app writes `schemaVersion: 2` (brief 02, T9). Version 2 only *adds* optional fields and
+one event type to version 1, listed in [Version 2 additions](#version-2-additions). Readers accept 1 and 2
+and refuse anything else with a clear error. v1 traces (including the PC recorder's) decode unchanged,
+and the metrics are the same for both versions.
 
 ## Example
 
@@ -33,7 +38,7 @@ exports, PC/SC baseline recordings and `MockTransport` fixtures.
 
 | Field | Type | Notes |
 |---|---|---|
-| `schemaVersion` | int | `1` |
+| `schemaVersion` | int | `2` (`1` for older traces and the PC recorder) |
 | `id` | UUID string | Unique per trace |
 | `createdAt` | ISO 8601 string | Wall-clock time in UTC, whole seconds. **Display only**, never used for timing |
 | `app` | `{name, version, build}` | Producer. The PC recorder writes `fidosims-pc-baseline` |
@@ -54,6 +59,7 @@ from `ContinuousClock` on iOS and `time.perf_counter_ns()` on the PC.
 | `sessionStarted` | `t` (always `0`) |
 | `cardDetected` | `t` |
 | `exchange` | `index`, `commandIndex`, `label`, `tx`, `rx`, `sw`, `tStart`, `tEnd`, `sensitive`; when redacted also `txLength`, `rxLength`, `redacted` |
+| `warning` | `t`, `code`, `message` (v2) |
 | `sessionEnded` | `t`, `reason` |
 
 `exchange` fields:
@@ -66,6 +72,9 @@ from `ContinuousClock` on iOS and `time.perf_counter_ns()` on the PC.
   Hex strings are uppercase with no spaces. An empty `rx` is `""`.
 - `tStart` / `tEnd`: taken by the transport immediately before and after the I/O call.
 - `sensitive`: the exchange carries secrets (ClientPIN, from brief 02 on).
+- `ctapStatus` (v2, optional): the CTAP status byte as two hex digits, e.g. `"00"` or `"31"`. Set only on
+  the exchange that completes a CTAP command, i.e. the last exchange of an NFCCTAP_MSG command whose final
+  SW is `9000`.
 
 #### GET RESPONSE is always short form
 
@@ -95,6 +104,10 @@ A closed set. Each `CardError` case maps to exactly one value.
 | `transportError` | `CardError.underlying`: any other transport error |
 | `error` | Any other error: channel protocol errors (chaining, `9100` timeout), `MockTransport` mismatch |
 
+In the brief 02 scenarios (Set PIN, Change PIN, Reset), a card that answers with a non-zero CTAP status
+(e.g. `0x31` wrong PIN) or a PIN refused before sending ends the session as `completed`: the session itself
+worked. The failure is in `outcome`.
+
 The PC recorder writes only `completed`, `selectFailed`, `ctap1Only`, `getInfoFailed` and `error`.
 **Readers must accept unknown values**, so later versions can add some without breaking older readers.
 The Swift decoder keeps them as `SessionEndReason.unknown(raw)` and writes them back unchanged.
@@ -116,6 +129,72 @@ log and the Safe view.
 Redacted traces decode, so they can be inspected and their metrics computed, but `MockTransport` refuses
 to replay a trace with any redacted exchange (`MockTransportError.redactedTrace`), because the bytes to
 compare and answer with are missing.
+
+## Version 2 additions
+
+All fields are optional for readers; the app always writes them in v2 traces.
+
+| Field | Type | Notes |
+|---|---|---|
+| `scenario` | string | `diagnostics`, `setPIN`, `changePIN`, `reset`, `register`, `authenticate`. Readers keep unknown values |
+| `outcome` | `{status, error?}` | `status` is `success`, `failure` or `cancelled`. `error` is present for `failure` |
+| `outcome.error` | `{domain, code, name, message}` | See below |
+| `card.aaguid` | UUID string | From GetInfo, uppercase, e.g. `2FC0579F-8113-47EA-B116-BB5A8DB9202A` |
+| `card.versions` | array of strings | From GetInfo, e.g. `["FIDO_2_0", "FIDO_2_1"]` |
+| `card.firmwareVersion` | int | From GetInfo, when the card reports it |
+| `exchange.ctapStatus` | hex string | See `exchange` fields above |
+| `warning` event | `{t, code, message}` | Something worth reporting that did not stop the scenario |
+
+The `card` fields are written only after GetInfo succeeded, and omitted otherwise.
+
+**`outcome.error`.** `domain` says which layer failed; `code` is a string whose form depends on it; `name`
+is a stable symbolic name; `message` is human-readable.
+
+| `domain` | `code` | `name` example |
+|---|---|---|
+| `transport` | the `sessionEnded.reason`, e.g. `tagConnectionLost` | `TAG_CONNECTION_LOST` |
+| `iso7816` | the status word, e.g. `6A82` | `FILE_NOT_FOUND` |
+| `ctap` | the status byte, e.g. `0x31` | `CTAP2_ERR_PIN_INVALID` |
+| `validation` | an identifier, e.g. `pinTooShort` | `PIN_TOO_SHORT` |
+| `rp` | an identifier (brief 03) | |
+| `internal` | an identifier, e.g. `unexpectedCommand` | `MOCK_UNEXPECTED_COMMAND` |
+
+**Warning codes.** An open set; readers keep unknown codes.
+
+| `code` | Meaning |
+|---|---|
+| `EXTENDED_FORM_CHAINED` | The card answered an extended-form command with `61xx` instead of returning all data at once |
+
+### v2 example
+
+```json
+{
+  "schemaVersion": 2,
+  "id": "6F1C2D3E-0000-4000-8000-0000000000C2",
+  "createdAt": "2026-11-20T00:00:00Z",
+  "app": { "name": "FIDOSims", "version": "0.2.0", "build": "1" },
+  "transport": "nfc",
+  "device": { "model": "iPhone16,2", "os": "iOS 26.1" },
+  "scenario": "changePIN",
+  "outcome": { "status": "failure",
+               "error": { "domain": "ctap", "code": "0x31", "name": "CTAP2_ERR_PIN_INVALID",
+                          "message": "The PIN is wrong. 7 retries left." } },
+  "card": { "label": "Lab card A", "initialSelectedAID": "A0000006472F0001",
+            "aaguid": "2FC0579F-8113-47EA-B116-BB5A8DB9202A", "versions": ["FIDO_2_0", "FIDO_2_1"] },
+  "options": { "lengthForm": "short", "getResponseSupported": false },
+  "events": [
+    { "type": "sessionStarted", "t": 0 },
+    { "type": "cardDetected", "t": 1503000000 },
+    { "type": "exchange", "index": 5, "commandIndex": 5, "label": "CLIENT_PIN_CHANGE",
+      "tx": null, "rx": null, "txLength": 150, "rxLength": 1, "redacted": true,
+      "sw": "9000", "tStart": 1600100000, "tEnd": 1702300000, "sensitive": true, "ctapStatus": "31" },
+    { "type": "sessionEnded", "t": 1750000000, "reason": "completed" }
+  ]
+}
+```
+
+(Exchanges 1–4 are omitted for brevity.) `sessionEnded.reason` describes the card session; `outcome`
+describes the scenario as the user saw it. A wrong PIN is a completed session with a failed outcome.
 
 ## Metrics
 
@@ -151,6 +230,9 @@ Session total 1842.700 ms | Card wait 1503.000 ms | APDU total 319.500 ms | Host
 ```
 
 - One block per **physical** exchange; the number is the exchange `index` (two digits minimum).
+- v2: the header ends with `| <scenario> <outcome status>`, plus `<domain> <error name>` on failure.
+  An exchange with `ctapStatus` is followed by `CTAP status XX`. Each warning is a line
+  `WARN <code>: <message>`, in event order.
 - An empty response is shown as `RX - | SW 6A82`. A metric that cannot be computed is shown as `-`.
 - `1 exchange` is singular.
 - In Safe mode and in redacted exports, sensitive bytes are shown as `<redacted N bytes>`.

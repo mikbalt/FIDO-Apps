@@ -33,8 +33,6 @@ public struct StatusWord: RawRepresentable, Hashable, Sendable {
         case .conditionsNotSatisfied: return "Conditions of use not satisfied"
         case .incorrectData: return "Incorrect data"
         case .fileNotFound: return "File or application not found"
-        case .incorrectP1P2: return "Incorrect P1-P2"
-        case .wrongP1P2: return "Wrong P1-P2"
         case .insNotSupported: return "INS not supported"
         case .claNotSupported: return "CLA not supported"
         case .nfcctapStatusUpdate: return "NFCCTAP status update"
@@ -54,8 +52,6 @@ public struct StatusWord: RawRepresentable, Hashable, Sendable {
         case .wrongLength: return "WRONG_LENGTH"
         case .conditionsNotSatisfied: return "CONDITIONS_NOT_SATISFIED"
         case .incorrectData: return "INCORRECT_DATA"
-        case .incorrectP1P2: return "INCORRECT_P1P2"
-        case .wrongP1P2: return "WRONG_P1P2"
         case .fileNotFound: return "FILE_NOT_FOUND"
         case .insNotSupported: return "INS_NOT_SUPPORTED"
         case .claNotSupported: return "CLA_NOT_SUPPORTED"
@@ -69,10 +65,6 @@ public struct StatusWord: RawRepresentable, Hashable, Sendable {
     public static let conditionsNotSatisfied = StatusWord(rawValue: 0x6985)
     public static let incorrectData = StatusWord(rawValue: 0x6A80)
     public static let fileNotFound = StatusWord(rawValue: 0x6A82)
-    /// Incorrect parameters P1–P2. One of the answers to an NFCCTAP_MSG P1 the card does not support.
-    public static let incorrectP1P2 = StatusWord(rawValue: 0x6A86)
-    /// Wrong parameters P1–P2. The other answer to an unsupported NFCCTAP_MSG P1.
-    public static let wrongP1P2 = StatusWord(rawValue: 0x6B00)
     public static let insNotSupported = StatusWord(rawValue: 0x6D00)
     public static let claNotSupported = StatusWord(rawValue: 0x6E00)
     public static let nfcctapStatusUpdate = StatusWord(rawValue: 0x9100)

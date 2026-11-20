@@ -1,9 +1,14 @@
+import Foundation
+
 /// Builds a `Trace` from a `CardConnection` and the `RawExchange`s a transport reports.
 ///
-/// An actor, so a channel, a UI observer and a cancellation path can all touch it safely.
+/// An actor, so a channel, a UI observer and a cancellation path can all touch it safely. Recording only
+/// appends to memory, so it does not distort the timings it records.
 public actor TraceRecorder {
     private let metadata: TraceMetadata
     private let connection: CardConnection
+    private var card: CardInfo
+    private var outcome: TraceOutcome?
     private var events: [TraceEvent]
     private var exchangeCount = 0
     private var commandCount = 0
@@ -12,6 +17,7 @@ public actor TraceRecorder {
     public init(metadata: TraceMetadata, connection: CardConnection) {
         self.metadata = metadata
         self.connection = connection
+        self.card = CardInfo(label: metadata.cardLabel, initialSelectedAID: connection.initialSelectedAID)
         let detected = (connection.cardDetectedAt - connection.sessionStartedAt).wholeNanoseconds
         self.events = [.sessionStarted(t: 0), .cardDetected(t: detected)]
         self.lastEventTime = detected
@@ -41,6 +47,31 @@ public actor TraceRecorder {
         lastEventTime = max(lastEventTime, event.tEnd)
     }
 
+    /// Sets `ctapStatus` on the last exchange: the one that completed a CTAP command.
+    public func markCTAPStatus(_ status: UInt8) {
+        guard let index = events.lastIndex(where: { if case .exchange = $0 { true } else { false } }),
+              case var .exchange(exchange) = events[index] else { return }
+        exchange.ctapStatus = status
+        events[index] = .exchange(exchange)
+    }
+
+    public func recordWarning(_ code: TraceWarningCode, _ message: String, at instant: ContinuousClock.Instant = .now) {
+        events.append(.warning(WarningEvent(t: max(offset(of: instant), 0), code: code, message: message)))
+    }
+
+    /// Fills the card metadata learned from GetInfo.
+    public func setCardDetails(aaguid: UUID?, versions: [String]?, firmwareVersion: UInt64?) {
+        card.aaguid = aaguid
+        card.versions = versions
+        card.firmwareVersion = firmwareVersion
+    }
+
+    /// Sets the scenario outcome. The first call wins.
+    public func finish(_ outcome: TraceOutcome) {
+        guard self.outcome == nil else { return }
+        self.outcome = outcome
+    }
+
     /// Appends `sessionEnded`. Ignored if the session already ended.
     ///
     /// The time is clamped so it never precedes the last exchange: a mock transport reports
@@ -64,7 +95,9 @@ public actor TraceRecorder {
             app: metadata.app,
             transport: metadata.transport,
             device: metadata.device,
-            card: CardInfo(label: metadata.cardLabel, initialSelectedAID: connection.initialSelectedAID),
+            scenario: metadata.scenario,
+            outcome: outcome,
+            card: card,
             options: metadata.options,
             events: events
         )

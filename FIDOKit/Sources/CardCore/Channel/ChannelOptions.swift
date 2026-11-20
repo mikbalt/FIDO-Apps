@@ -2,7 +2,7 @@
 public struct ChannelOptions: Sendable, Equatable {
     public var lengthForm: LengthForm
     /// Set P1 = `80` in NFCCTAP_MSG, telling the card the client supports NFCCTAP_GETRESPONSE.
-    /// Defaults to true from brief 02 on; cards that refuse it get a P1 = `00` fallback.
+    /// Off by default: on NFC the tap already counts as user presence (brief 02).
     public var getResponseSupported: Bool
     /// Delay between NFCCTAP_GETRESPONSE polls after a `9100` status update.
     public var statusPollInterval: Duration
@@ -11,7 +11,7 @@ public struct ChannelOptions: Sendable, Equatable {
 
     public init(
         lengthForm: LengthForm = .short,
-        getResponseSupported: Bool = true,
+        getResponseSupported: Bool = false,
         statusPollInterval: Duration = .zero,
         statusUpdateTimeout: Duration = .seconds(30)
     ) {

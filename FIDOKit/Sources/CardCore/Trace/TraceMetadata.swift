@@ -7,6 +7,8 @@ public struct TraceMetadata: Sendable {
     public var app: AppInfo
     public var transport: TransportKind
     public var device: DeviceInfo
+    /// v2. `nil` for low-level channel use outside a scenario (tests).
+    public var scenario: TraceScenario?
     public var cardLabel: String
     public var options: TraceOptions
 
@@ -16,6 +18,7 @@ public struct TraceMetadata: Sendable {
         app: AppInfo = .current(),
         transport: TransportKind,
         device: DeviceInfo = .current,
+        scenario: TraceScenario? = nil,
         cardLabel: String,
         options: TraceOptions
     ) {
@@ -25,6 +28,7 @@ public struct TraceMetadata: Sendable {
         self.app = app
         self.transport = transport
         self.device = device
+        self.scenario = scenario
         self.cardLabel = cardLabel
         self.options = options
     }

@@ -14,24 +14,4 @@ public enum NFCCTAPStatus: Equatable, Sendable {
         default: self = .other(statusByte)
         }
     }
-
-    /// The trace form: `PROCESSING`, `UPNEEDED`, the byte in hex (e.g. `05`) or `NONE` when missing.
-    public var traceValue: String {
-        switch self {
-        case .processing: "PROCESSING"
-        case .userPresenceNeeded: "UPNEEDED"
-        case let .other(byte?): Hex.byte(byte)
-        case .other(nil): "NONE"
-        }
-    }
-
-    public init(traceValue: String) {
-        switch traceValue {
-        case "PROCESSING": self = .processing
-        case "UPNEEDED": self = .userPresenceNeeded
-        default:
-            let bytes = try? Hex.parse(traceValue)
-            self = .other(bytes?.count == 1 ? bytes?.first : nil)
-        }
-    }
 }

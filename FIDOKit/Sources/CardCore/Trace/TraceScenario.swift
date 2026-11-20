@@ -6,12 +6,10 @@ public enum TraceScenario: Hashable, Sendable {
     case reset
     case register
     case authenticate
-    /// Hand-built APDUs or low-level channel use, e.g. tests.
-    case raw
     case unknown(String)
 
     public static let known: [TraceScenario] = [
-        .diagnostics, .setPIN, .changePIN, .reset, .register, .authenticate, .raw,
+        .diagnostics, .setPIN, .changePIN, .reset, .register, .authenticate,
     ]
 
     public init(rawValue: String) {
@@ -26,7 +24,6 @@ public enum TraceScenario: Hashable, Sendable {
         case .reset: "reset"
         case .register: "register"
         case .authenticate: "authenticate"
-        case .raw: "raw"
         case let .unknown(raw): raw
         }
     }

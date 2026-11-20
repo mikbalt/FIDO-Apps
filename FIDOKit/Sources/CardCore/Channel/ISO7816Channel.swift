@@ -94,6 +94,14 @@ public final class ISO7816Channel: Sendable {
             response = try await exchange(last, form: form)
         }
 
+        // An extended-form command should get all its data at once; 61xx means the card chained anyway.
+        if form == .extended, response.sw.sw1 == 0x61 {
+            await recorder.recordWarning(
+                .extendedFormChained,
+                "\(label): the card answered an extended-form command with SW \(response.sw.hex)."
+            )
+        }
+
         // 3 and 5. Collect GET RESPONSE data and follow NFCCTAP status updates until a final SW.
         // Both follow-up commands are always short form, whatever `form` is (docs/trace-format.md).
         var data = Data()

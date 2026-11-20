@@ -17,6 +17,8 @@ public struct ExchangeEvent: Sendable, Equatable, Identifiable {
     /// Nanoseconds since `sessionStarted`, immediately after the I/O call returned.
     public var tEnd: Int64
     public var sensitive: Bool
+    /// v2. The CTAP status byte, set on the exchange that completes a CTAP command.
+    public var ctapStatus: UInt8?
     /// `tx` and `rx` were replaced by zero bytes of the same length. In JSON, a redacted exchange has
     /// `"tx": null`, `"rx": null`, `txLength`, `rxLength` and `"redacted": true`.
     public var isRedacted: Bool
@@ -31,6 +33,7 @@ public struct ExchangeEvent: Sendable, Equatable, Identifiable {
         tStart: Int64,
         tEnd: Int64,
         sensitive: Bool,
+        ctapStatus: UInt8? = nil,
         isRedacted: Bool = false
     ) {
         self.index = index
@@ -42,6 +45,7 @@ public struct ExchangeEvent: Sendable, Equatable, Identifiable {
         self.tStart = tStart
         self.tEnd = tEnd
         self.sensitive = sensitive
+        self.ctapStatus = ctapStatus
         self.isRedacted = isRedacted
     }
 
@@ -79,7 +83,7 @@ public struct ExchangeEvent: Sendable, Equatable, Identifiable {
 
 extension ExchangeEvent: Codable {
     private enum CodingKeys: String, CodingKey {
-        case index, commandIndex, label, tx, rx, txLength, rxLength, redacted, sw, tStart, tEnd, sensitive
+        case index, commandIndex, label, tx, rx, txLength, rxLength, redacted, sw, tStart, tEnd, sensitive, ctapStatus
     }
 
     public init(from decoder: any Decoder) throws {
@@ -91,6 +95,15 @@ extension ExchangeEvent: Codable {
         tStart = try container.decode(Int64.self, forKey: .tStart)
         tEnd = try container.decode(Int64.self, forKey: .tEnd)
         sensitive = try container.decode(Bool.self, forKey: .sensitive)
+        if let status = try container.decodeIfPresent(String.self, forKey: .ctapStatus) {
+            let bytes = try Hex.parse(status)
+            guard bytes.count == 1 else {
+                throw DecodingError.dataCorruptedError(forKey: .ctapStatus, in: container, debugDescription: "Expected one hex byte.")
+            }
+            ctapStatus = bytes.first
+        } else {
+            ctapStatus = nil
+        }
         isRedacted = try container.decodeIfPresent(Bool.self, forKey: .redacted) ?? false
 
         if isRedacted {
@@ -128,6 +141,7 @@ extension ExchangeEvent: Codable {
         try container.encode(tStart, forKey: .tStart)
         try container.encode(tEnd, forKey: .tEnd)
         try container.encode(sensitive, forKey: .sensitive)
+        try container.encodeIfPresent(ctapStatus.map(Hex.byte), forKey: .ctapStatus)
     }
 
     private static func decodeLength(_ key: CodingKeys, in container: KeyedDecodingContainer<CodingKeys>) throws -> Int {

@@ -6,17 +6,14 @@ import Testing
 struct ISO7816ChannelTests {
     private typealias Step = MockScript.Step
 
-    /// The scripts below use NFCCTAP_MSG with P1 = 00, so the channels default to `getResponseSupported: false`.
-    private static let p1Zero = ChannelOptions(getResponseSupported: false)
-
     private func makeChannel(
-        _ steps: [Step], options: ChannelOptions = p1Zero
+        _ steps: [Step], options: ChannelOptions = ChannelOptions()
     ) async throws -> (ISO7816Channel, MockTransport) {
         let transport = try MockScript.transport(steps)
         return (try await makeChannel(transport: transport, options: options), transport)
     }
 
-    private func makeChannel(transport: any CardTransport, options: ChannelOptions = p1Zero) async throws -> ISO7816Channel {
+    private func makeChannel(transport: any CardTransport, options: ChannelOptions = ChannelOptions()) async throws -> ISO7816Channel {
         let connection = try await transport.open(prompt: "")
         let recorder = TraceRecorder(
             metadata: TraceMetadata(transport: transport.kind, cardLabel: "Test", options: options.traceOptions),
@@ -105,7 +102,7 @@ struct ISO7816ChannelTests {
         let payload = Data(repeating: 0x22, count: 300)
         let (channel, _) = try await makeChannel(
             [Step(tx: "80100000" + "00012C" + Hex.compact(payload) + "0000", sw: "9000")],
-            options: ChannelOptions(lengthForm: .extended, getResponseSupported: false)
+            options: ChannelOptions(lengthForm: .extended)
         )
         _ = try await channel.send(channel.nfcctapMsg(payload), label: "CTAP")
         #expect(await channel.recorder.trace.exchanges.count == 1)
@@ -189,10 +186,9 @@ struct ISO7816ChannelTests {
 
     @Test("nfcctapMsg: P1 follows getResponseSupported and Le is the form's maximum")
     func nfcctapMsg() async throws {
-        #expect(ChannelOptions().getResponseSupported)
+        #expect(!ChannelOptions().getResponseSupported)
         let (short, _) = try await makeChannel([])
         #expect(try short.nfcctapMsg(Data([0x04])).encoded(.short) == Hex.parse("80100000010400"))
-        #expect(try short.nfcctapMsg(Data([0x04]), getResponseSupported: true).encoded(.short) == Hex.parse("80108000010400"))
 
         let (extended, _) = try await makeChannel([], options: ChannelOptions(lengthForm: .extended, getResponseSupported: true))
         let message = extended.nfcctapMsg(Data([0x04]))
@@ -201,54 +197,7 @@ struct ISO7816ChannelTests {
         #expect(try message.encoded(.extended) == Hex.parse("80108000000001040000"))
     }
 
-    // MARK: - v2 events
-
-    @Test("Each logical command records one command event after its exchanges")
-    func commandEvents() async throws {
-        let (channel, _) = try await makeChannel([
-            Step(tx: "80100000010400", rx: "0001", sw: "6101"),
-            Step(tx: "00C0000001", rx: "02", sw: "9000"),
-        ])
-        _ = try await channel.send(getInfo, label: "GET_INFO")
-        let trace = await channel.recorder.trace
-        let command = try #require(trace.commands.first)
-        #expect(trace.commands.count == 1)
-        #expect(command.exchanges == [1, 2])
-        #expect(command.sw == .success)
-        #expect(command.ctapCommand == nil)
-        #expect(command.tStart == trace.exchanges[0].tStart)
-        #expect(command.tEnd == trace.exchanges[1].tEnd)
-        guard case .command = trace.events.last else {
-            Issue.record("The command event must follow its exchanges")
-            return
-        }
-    }
-
-    @Test("A command that fails partway still records its command event")
-    func failedCommandEvent() async throws {
-        let payload = Data(repeating: 0x11, count: 600)
-        let (channel, _) = try await makeChannel([
-            Step(tx: "90100000FF" + Hex.compact(payload.prefix(255)), sw: "6700"),
-        ])
-        await #expect(throws: ChannelError.self) { try await channel.send(channel.nfcctapMsg(payload), label: "CTAP") }
-        let commands = await channel.recorder.trace.commands
-        #expect(commands.map(\.sw) == [.wrongLength])
-        #expect(commands.map(\.exchanges) == [[1]])
-    }
-
-    @Test("9100 updates are recorded as status events")
-    func statusEvents() async throws {
-        let (channel, _) = try await makeChannel([
-            Step(tx: "80100000010400", rx: "01", sw: "9100"),
-            Step(tx: "8011000000", rx: "02", sw: "9100"),
-            Step(tx: "8011000000", rx: "00", sw: "9000"),
-        ])
-        _ = try await channel.send(getInfo, label: "GET_INFO")
-        let statuses = await channel.recorder.trace.events.compactMap { event -> NFCCTAPStatus? in
-            if case let .status(_, value) = event { value } else { nil }
-        }
-        #expect(statuses == [.processing, .userPresenceNeeded])
-    }
+    // MARK: - v2 warnings
 
     @Test("61xx in answer to an extended-form command records EXTENDED_FORM_CHAINED")
     func extendedFormChained() async throws {
@@ -257,7 +206,7 @@ struct ISO7816ChannelTests {
                 Step(tx: "8010000000000104" + "0000", rx: "00", sw: "6101"),
                 Step(tx: "00C0000001", rx: "A0", sw: "9000"),
             ],
-            options: ChannelOptions(lengthForm: .extended, getResponseSupported: false)
+            options: ChannelOptions(lengthForm: .extended)
         )
         let response = try await channel.send(channel.nfcctapMsg(Data([0x04])), label: "GET_INFO")
         #expect(response.data == Data([0x00, 0xA0]))
@@ -273,38 +222,5 @@ struct ISO7816ChannelTests {
         ])
         _ = try await channel.send(getInfo, label: "GET_INFO")
         #expect(await channel.recorder.trace.warnings.isEmpty)
-    }
-
-    @Test("NFCCTAP_MSG with P1 80 refused with 6A86 or 6B00: one resend with P1 00 in the same command", arguments: ["6A86", "6B00"])
-    func p1Fallback(sw: String) async throws {
-        let (channel, transport) = try await makeChannel([
-            Step(tx: "80108000010400", sw: sw),
-            Step(tx: "80100000010400", rx: "00A0", sw: "9000"),
-        ])
-        let result = try await channel.sendNFCCTAP(Data([0x04]), label: "GET_INFO", getResponseSupported: true)
-        #expect(result.usedP1Fallback)
-        #expect(result.response == ResponseAPDU(data: Data([0x00, 0xA0]), sw: .success))
-        #expect(await transport.remainingExchanges == 0)
-
-        let trace = await channel.recorder.trace
-        #expect(trace.exchanges.map(\.commandIndex) == [1, 1])
-        #expect(trace.warnings.map(\.code) == [.p1Fallback])
-        let command = try #require(trace.commands.first)
-        #expect(command.ctapCommand == 0x04)
-        #expect(command.ctapStatus == 0x00)
-        #expect(command.exchanges == [1, 2])
-    }
-
-    @Test("No fallback when P1 is already 00, or the card accepts P1 80")
-    func noP1Fallback() async throws {
-        let (refused, _) = try await makeChannel([Step(tx: "80100000010400", sw: "6A86")])
-        let result = try await refused.sendNFCCTAP(Data([0x04]), label: "GET_INFO", getResponseSupported: false)
-        #expect(!result.usedP1Fallback)
-        #expect(result.response.sw == .incorrectP1P2)
-
-        let (accepted, _) = try await makeChannel([Step(tx: "80108000010400", rx: "00", sw: "9000")])
-        let ok = try await accepted.sendNFCCTAP(Data([0x04]), label: "GET_INFO", getResponseSupported: true)
-        #expect(!ok.usedP1Fallback)
-        #expect(await accepted.recorder.trace.warnings.isEmpty)
     }
 }

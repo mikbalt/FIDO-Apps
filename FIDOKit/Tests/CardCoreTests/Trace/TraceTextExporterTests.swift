@@ -3,7 +3,7 @@ import Testing
 
 @Suite("Text export")
 struct TraceTextExporterTests {
-    @Test("Matches the golden file", arguments: ["synthetic-fido2-getinfo-chained", "synthetic-select-fail", "synthetic-v2-timeline"])
+    @Test("Matches the golden file", arguments: ["synthetic-fido2-getinfo-chained", "synthetic-select-fail", "synthetic-getinfo-full"])
     func golden(name: String) throws {
         let text = TraceTextExporter.text(for: try Fixtures.trace(name))
         #expect(text == (try Fixtures.golden(name)))
