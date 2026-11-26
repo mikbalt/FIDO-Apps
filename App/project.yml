@@ -46,11 +46,33 @@ targets:
       - package: FIDOKit
         product: FIDOKit
 
+  FIDOSimsTests:
+    type: bundle.unit-test
+    platform: iOS
+    deploymentTarget: "17.0"
+    sources:
+      - path: FIDOSimsTests
+      # Test-only fake card (shared with the package tests); compiled into the tests, never the app.
+      - path: ../FIDOKit/Tests/FIDOTestSupport
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: $(BUNDLE_ID_PREFIX).fidosims.tests
+        GENERATE_INFOPLIST_FILE: YES
+        SWIFT_VERSION: "6.0"
+    dependencies:
+      - target: FIDOSims
+      - package: FIDOKit
+        product: FIDOKit
+
 schemes:
   FIDOSims:
     build:
       targets:
         FIDOSims: all
+    test:
+      config: Debug
+      targets:
+        - FIDOSimsTests
     run:
       config: Debug
     archive:

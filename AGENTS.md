@@ -18,6 +18,7 @@ Owner: Mokhamad Ikbal Taqyudin ("Ikbal"). The briefs in `docs/briefs/` are the s
 | `FIDOKit/Sources/CTAP` | Canonical CBOR, `CTAPClient`, GetInfo model, Decoded-view decoder. Pure Swift |
 | `FIDOKit/Sources/PinUvAuth` | PIN/UV auth protocol 2 (CryptoKit + CommonCrypto), authenticatorClientPIN |
 | `FIDOKit/Sources/FIDOKit` | CoreNFC transport (iOS only), the `FIDOSimulator` facade, Keychain PIN store |
+| `App/FIDOSimsTests/` | App unit tests for the Lab view models (compiles `FakeAuthenticator` in; never shipped in the app) |
 | `FIDOKit/Tests/FIDOTestSupport` | **Test-only** `FakeAuthenticator` (a ClientPIN card in memory). Never ship it |
 | `tools/pc-baseline/` | Python PC/SC recorder (optional, brief 01 T7) |
 | `docs/trace-format.md` | The trace format contract (schema v2, reads v1) |
@@ -36,6 +37,10 @@ xcodebuild -workspace FIDOSims.xcworkspace -scheme FIDOSims \
   -destination 'generic/platform=iOS Simulator' -derivedDataPath /tmp/fidosims-dd build
 xcodebuild -workspace FIDOSims.xcworkspace -scheme FIDOSims \
   -destination 'generic/platform=iOS' -derivedDataPath /tmp/fidosims-dd CODE_SIGNING_ALLOWED=NO build
+
+# App tests (Lab view models; Swift Testing, no NFC)
+xcodebuild -project App/FIDOSims.xcodeproj -scheme FIDOSims \
+  -destination 'platform=iOS Simulator,name=iPhone 17' -derivedDataPath /tmp/fidosims-dd test
 
 # After changing fixtures in FIDOKit/Tests/CardCoreTests/Fixtures/synthetic
 tools/sync-fixtures.sh
