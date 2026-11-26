@@ -12,12 +12,17 @@ concurrency:
 permissions:
   contents: read
 
+# Runner image and Xcode are pinned on purpose: a new Xcode can add warnings and turn the gate red
+# without any code change. Bump both together, deliberately.
+
 jobs:
   sdk:
     name: SDK (swift test)
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Select Xcode
+        run: sudo xcode-select -s /Applications/Xcode_26.6.app
       - name: Build and test FIDOKit
         working-directory: FIDOKit
         run: |
@@ -47,6 +52,8 @@ jobs:
             extra: CODE_SIGNING_ALLOWED=NO
     steps:
       - uses: actions/checkout@v4
+      - name: Select Xcode
+        run: sudo xcode-select -s /Applications/Xcode_26.6.app
       - name: Install XcodeGen
         run: brew install xcodegen
       - name: Generate project
