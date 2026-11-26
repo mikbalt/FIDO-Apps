@@ -21,5 +21,3 @@ public struct AppInfo: Codable, Sendable, Equatable {
         )
     }
 }
-
-func ciWarningProbe() { let unused = 1 }
