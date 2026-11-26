@@ -18,7 +18,7 @@ permissions:
 jobs:
   sdk:
     name: SDK (swift test)
-    runs-on: macos-latest
+    runs-on: macos-26
     steps:
       - uses: actions/checkout@v4
       - name: Select Xcode
@@ -39,7 +39,7 @@ jobs:
 
   app:
     name: App (${{ matrix.name }})
-    runs-on: macos-latest
+    runs-on: macos-26
     strategy:
       fail-fast: false
       matrix:
