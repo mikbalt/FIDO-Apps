@@ -51,6 +51,20 @@ Fixtures live in `FIDOKit/Tests/CardCoreTests/Fixtures/`:
 
 After changing fixtures, run `tools/sync-fixtures.sh` to update `App/FIDOSims/Resources/MockTraces/`.
 
+## CI
+
+`.github/workflows/ci.yml` runs on every pull request and on pushes to `main`, on a macOS runner, with no
+secrets or signing. It shows up as three checks on the PR (or under the **Actions** tab):
+
+- **SDK (swift test)**: `cd FIDOKit && swift build && swift test`.
+- **App (iOS Simulator)** and **App (iOS device (unsigned))**: `xcodegen generate`, then the two `xcodebuild`
+  builds from `AGENTS.md` (the device one with `CODE_SIGNING_ALLOWED=NO`).
+
+Each job also fails on any `warning:` in its log except the `appintentsmetadataprocessor` note. To read a
+failure, open the check, expand the failing step and look for `error:` (a build or test failure) or the
+warning lines printed just before the "Warnings in project code" annotation. Reproduce locally with the
+commands in [`AGENTS.md`](AGENTS.md).
+
 ## Mock run
 
 1. In Xcode, pick the `FIDOSims` scheme and an iOS Simulator, then Run. The app opens on **Lab**; tap
