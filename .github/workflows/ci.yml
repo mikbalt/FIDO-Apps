@@ -1,0 +1,74 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+# Runner image and Xcode are pinned on purpose: a new Xcode can add warnings and turn the gate red
+# without any code change. Bump both together, deliberately.
+
+jobs:
+  sdk:
+    name: SDK (swift test)
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@v4
+      - name: Select Xcode
+        run: sudo xcode-select -s /Applications/Xcode_26.6.app
+      - name: Build and test FIDOKit
+        working-directory: FIDOKit
+        run: |
+          set -o pipefail
+          swift build 2>&1 | tee build.log
+          swift test 2>&1 | tee -a build.log
+      - name: Fail on warnings in project code
+        working-directory: FIDOKit
+        run: |
+          if grep -E "warning:" build.log | grep -v "appintentsmetadataprocessor"; then
+            echo "::error::Warnings in project code (see above). AGENTS.md allows none."
+            exit 1
+          fi
+
+  app:
+    name: App (${{ matrix.name }})
+    runs-on: macos-26
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: iOS Simulator
+            destination: generic/platform=iOS Simulator
+            extra: ""
+          - name: iOS device (unsigned)
+            destination: generic/platform=iOS
+            extra: CODE_SIGNING_ALLOWED=NO
+    steps:
+      - uses: actions/checkout@v4
+      - name: Select Xcode
+        run: sudo xcode-select -s /Applications/Xcode_26.6.app
+      - name: Install XcodeGen
+        run: brew install xcodegen
+      - name: Generate project
+        working-directory: App
+        run: xcodegen generate
+      - name: Build
+        run: |
+          set -o pipefail
+          xcodebuild -workspace FIDOSims.xcworkspace -scheme FIDOSims \
+            -destination '${{ matrix.destination }}' \
+            -derivedDataPath "$RUNNER_TEMP/dd" ${{ matrix.extra }} build 2>&1 | tee build.log
+      - name: Fail on warnings in project code
+        run: |
+          # The only accepted warning is the appintentsmetadataprocessor note.
+          if grep -E "warning:" build.log | grep -v "appintentsmetadataprocessor" | sort -u | grep .; then
+            echo "::error::Warnings in project code (see above). AGENTS.md allows none."
+            exit 1
+          fi
