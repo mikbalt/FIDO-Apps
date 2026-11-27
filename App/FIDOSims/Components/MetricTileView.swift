@@ -4,6 +4,7 @@ import SwiftUI
 struct MetricTileView: View {
     let title: String
     let value: String
+    var caption: String?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
@@ -14,6 +15,11 @@ struct MetricTileView: View {
                 .font(.body.monospacedDigit().weight(.semibold))
                 .lineLimit(1)
                 .minimumScaleFactor(0.7)
+            if let caption {
+                Text(caption)
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+            }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(10)
