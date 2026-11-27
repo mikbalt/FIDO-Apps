@@ -57,7 +57,7 @@ struct GetAssertionTests {
         let session = try await CardSession()
         _ = try await session.register()
         let id = try #require(await session.card.credentials.first?.id)
-        try await session.client.send(.reset, parameters: nil, label: "RESET")
+        _ = try await session.client.send(.reset, parameters: nil, label: "RESET")
         // Reset removed the PIN; set it again so a token can be issued.
         let agreement = try await session.clientPIN.keyAgreement()
         try await session.clientPIN.setPIN(try CardPIN("1234"), using: agreement)
