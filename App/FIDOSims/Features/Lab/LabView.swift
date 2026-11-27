@@ -7,12 +7,14 @@ struct LabView: View {
     @State private var changePIN: ChangePINViewModel
     @State private var setPIN: SetPINViewModel
     @State private var reset: ResetViewModel
+    @State private var registrations: RegistrationsViewModel
 
     init(environment: LabEnvironment) {
         _diagnostics = State(initialValue: DiagnosticsViewModel(environment: environment))
         _changePIN = State(initialValue: ChangePINViewModel(environment: environment))
         _setPIN = State(initialValue: SetPINViewModel(environment: environment))
         _reset = State(initialValue: ResetViewModel(environment: environment))
+        _registrations = State(initialValue: RegistrationsViewModel(store: environment.credentialStore))
     }
 
     var body: some View {
@@ -20,6 +22,9 @@ struct LabView: View {
             List {
                 Section("Card") {
                     NavigationLink("Diagnostics") { DiagnosticsView(model: diagnostics) }
+                }
+                Section("Registrations") {
+                    NavigationLink("Registrations") { RegistrationsView(model: registrations) }
                 }
                 Section("PIN and reset") {
                     NavigationLink("Change PIN") { ChangePINView(model: changePIN) }

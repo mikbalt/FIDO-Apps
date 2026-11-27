@@ -6,7 +6,8 @@ struct LabEnvironment: Sendable {
     let fixtures: [MockFixture]
     let makeTransport: @MainActor (TransportSelection) throws -> any CardTransport
     let pinStore: any PINStore
-    /// Brief 03 marks the card's registrations invalid here.
+    let credentialStore: CredentialStore
+    /// Called after a successful reset: marks the card's registrations invalid.
     let onCardReset: @Sendable (String) -> Void
 
     func configuration(cardLabel: String = "", lengthForm: LengthForm = .short, getResponseSupported: Bool = false) -> FIDOSimConfiguration {

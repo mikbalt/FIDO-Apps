@@ -12,12 +12,15 @@ final class AppContainer {
         #else
         let isNFCAvailable = NFCCardTransport.isAvailable
         #endif
+        // A credentials file that cannot be read is left alone; the app then works with an empty in-memory store.
+        let store = (try? CredentialStore(fileURL: CredentialStore.defaultFileURL())) ?? CredentialStore()
         environment = LabEnvironment(
             isNFCAvailable: isNFCAvailable,
             fixtures: MockFixture.loadAll(from: bundle),
             makeTransport: Self.makeTransport,
             pinStore: KeychainPINStore(),
-            onCardReset: { _ in }
+            credentialStore: store,
+            onCardReset: { label in _ = try? store.invalidateCredentials(forCard: label) }
         )
     }
 
