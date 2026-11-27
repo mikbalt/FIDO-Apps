@@ -30,6 +30,49 @@ See [`docs/briefs/README.md`](docs/briefs/README.md) for the plan and the briefs
 merge conflicts in `project.pbxproj`. Run `xcodegen generate` again after pulling changes to
 `project.yml`, or after adding or removing files in the app target.
 
+## Internal distribution
+
+For testers inside the company only; there is no App Store submission.
+
+**Signing and bundle ID.** Nothing is hard-coded. `App/Config/Base.xcconfig` holds placeholders
+(`com.example`, no team) and includes `App/Config/Signing.local.xcconfig` (gitignored) if present. Copy
+`Signing.local.xcconfig.example` to that name and set `DEVELOPMENT_TEAM` and `BUNDLE_ID_PREFIX`. The app's bundle ID
+is `$(BUNDLE_ID_PREFIX).fidosims` (tests: `.fidosims.tests`), so the prefix must be one your team can register.
+
+**NFC needs a paid team.** The NFC Tag Reading capability (`com.apple.developer.nfc.readersession.formats`) is not
+available to personal teams, so device builds, TestFlight and Ad Hoc all need a paid Apple Developer Program team.
+Automatic signing creates the App ID with the capability; check it is enabled under Signing & Capabilities.
+
+**Privacy manifest.** `App/FIDOSims/PrivacyInfo.xcprivacy` declares no tracking, no collected data and no
+required-reason APIs, because the app uses none (the Keychain is not a required-reason API; there is no
+`UserDefaults`, no file timestamp or disk space API and no networking).
+
+**App icon.** `AppIcon.appiconset` holds a grey "TEMP" placeholder so archives validate. Replace
+`AppIcon-placeholder.png` with the real 1024x1024 PNG (no alpha) before wider distribution.
+
+**Archive** (Release, signed, with your `Signing.local.xcconfig` in place):
+
+```sh
+cd App && xcodegen generate
+xcodebuild -workspace FIDOSims.xcworkspace -scheme FIDOSims -configuration Release \
+  -destination 'generic/platform=iOS' -archivePath build/FIDOSims.xcarchive archive
+```
+
+Bump `MARKETING_VERSION` / `CURRENT_PROJECT_VERSION` in `App/project.yml` for each upload (the build number must
+increase).
+
+**TestFlight (internal testing).**
+1. In App Store Connect, create the app record with the bundle ID above (once).
+2. Xcode: Window > Organizer > select the archive > Distribute App > App Store Connect > Upload. (Or export with
+   `xcodebuild -exportArchive` and upload with Transporter.)
+3. After processing, add testers under TestFlight > Internal Testing (up to 100 App Store Connect users, no beta
+   review). Answer the export-compliance question once: the app only uses Apple's CryptoKit and CommonCrypto.
+
+**Ad Hoc.**
+1. Register each tester device UDID under Certificates, Identifiers & Profiles > Devices (max 100 iPhones per year).
+2. Organizer > Distribute App > Debugging or Release Testing (Ad Hoc); let Xcode create the provisioning profile.
+3. Install the exported `.ipa` with Apple Configurator, Finder, or an internal OTA host.
+
 ## Tests
 
 ```sh
