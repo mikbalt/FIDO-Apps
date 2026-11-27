@@ -26,7 +26,7 @@ None is "done" until checked on the IDEMIA card.
 | T5 authenticatorClientPIN | Done | `PinUvAuth/ClientPIN` |
 | T6 `FIDOSimulator` facade | Done | `FIDOKit/Simulator` |
 | T7 Scenarios | Done | `FIDOSimulator.swift` |
-| T8 Store PIN (Keychain) | Done; no automated test yet — [#3](https://github.com/mikbalt/FIDO-Apps/issues/3) | `FIDOKit/PINStore` |
+| T8 Store PIN (Keychain) | Done; iOS-hosted test in `FIDOSimsTests` ([#3](https://github.com/mikbalt/FIDO-Apps/issues/3)) | `FIDOKit/PINStore` |
 | T9 Trace additions (v2) | Done | `CardCore/Trace`, `docs/trace-format.md` |
 | T10 Lab UI | Done; checked in the Simulator | `App/FIDOSims/Features/Lab` |
 
@@ -55,7 +55,6 @@ contract in T5 is untouched; T5 maps its records to it.
 |---|---|---|
 | [#1](https://github.com/mikbalt/FIDO-Apps/issues/1) | Brief 01 sign-off on device | Ikbal |
 | [#2](https://github.com/mikbalt/FIDO-Apps/issues/2) | Brief 02 sign-off on device; GetInfo values to the card team | Ikbal |
-| [#3](https://github.com/mikbalt/FIDO-Apps/issues/3) | Automated test for `KeychainPINStore` | Agent (`agent-ready`) |
 | [#4](https://github.com/mikbalt/FIDO-Apps/issues/4) | App test target for the Lab view models | Agent (`agent-ready`) |
 | [#5](https://github.com/mikbalt/FIDO-Apps/issues/5) | Lab UI polish from the Simulator check | Agent (`agent-ready`) |
 | [#6](https://github.com/mikbalt/FIDO-Apps/issues/6) | Decide: replay of exported PIN-scenario traces | Ikbal (decision) |
