@@ -33,7 +33,7 @@ public actor FakeAuthenticator: CardTransport {
 
     public private(set) var credentials: [Credential] = []
     /// When false the card always answers signCount 0, like cards that do not keep a counter.
-    public var countsSignatures = true
+    public private(set) var countsSignatures = true
     /// What the last PIN token was issued for: permission bits and rpId.
     public private(set) var tokenGrant: (permissions: Int, rpId: String?)?
 
@@ -51,6 +51,8 @@ public actor FakeAuthenticator: CardTransport {
         if let pinProtocols { self.pinProtocols = pinProtocols }
         if let retries { self.retries = retries }
     }
+
+    public func setCountsSignatures(_ value: Bool) { countsSignatures = value }
 
     public var commandsReceived: [UInt8] { requests.map(\.command) }
 
