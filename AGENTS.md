@@ -92,6 +92,10 @@ values that are not in the brief; GetInfo shows a U2F-only card or no PIN protoc
 - When a History trace is shown, the status row says "History · <time>" with "Back to latest";
   numbers on screen are never ambiguous about which run they belong to.
 - PIN and Reset screens need NFC; there is no mock for them. The default PIN `1234` is a UI default only.
+- **No third-party SDKs (including YubiKit): everything is built in-house.** Why: compliance and ease of audit
+  (no third-party supply chain, only Apple frameworks: CoreNFC, CryptoKit, CommonCrypto, Security), and full
+  control of per-APDU timing and the trace format. Algorithms in use: ECDH P-256, HKDF-SHA256, AES-256-CBC with
+  random IV, HMAC-SHA256, SHA-256 left 16 bytes for the PIN hash. ES256 is added in brief 03.
 
 ## Workflow
 

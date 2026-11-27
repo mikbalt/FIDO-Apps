@@ -25,6 +25,7 @@ These briefs deliver exactly that, on iOS, in three steps. Anything beyond it is
 - **Final UI is waiting on the UI/UX team.**
   - Until it arrives, every screen is an engineering screen under `Features/Lab/`: functional, plain SwiftUI, no visual polish.
   - Keep all logic in the SDK facade (`FIDOSimulator`) and in ViewModels, so the final UI only replaces Views.
+- **No third-party SDKs (including YubiKit).** Everything is built in-house on Apple frameworks only (CoreNFC, CryptoKit, CommonCrypto, Security), for compliance and ease of audit, and for full control of per-APDU timing and the trace format. Algorithms: ECDH P-256, HKDF-SHA256, AES-256-CBC with random IV, HMAC-SHA256, SHA-256 left 16 bytes (PIN hash); ES256 is added in brief 03.
 - **Direct CTAP over NFC.** The app talks CTAP to the card itself, because that is the only way to time each command. No ASAuthorization or platform passkey APIs.
 - **Timing = what the mockup shows.** Per-command RTT, transaction total (including the wait for the card), APDU total and number of exchanges. Shown on screen and exported as a text log.
 
@@ -46,6 +47,7 @@ These briefs deliver exactly that, on iOS, in three steps. Anything beyond it is
 - Discoverable credentials and GetNextAssertion; extensions; EdDSA.
 - PIN protocol 1, unless the card does not support protocol 2.
 - Software authenticator for development without a card.
+- ML-DSA (post-quantum, e.g. ML-DSA-65): only if the card reports support in GetInfo `algorithms` and the BU asks. Keys and signatures are far larger (public key ~1.9 KB, signature ~3.3 KB), so authData parsing and storage must not assume fixed key sizes.
 
 ## Open decisions
 
