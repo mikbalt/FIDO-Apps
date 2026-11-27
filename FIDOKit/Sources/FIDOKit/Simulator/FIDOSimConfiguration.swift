@@ -14,6 +14,8 @@ public struct FIDOSimConfiguration: Sendable {
     public var onCardReset: @Sendable (String) -> Void
     /// Where registrations are kept. `nil`: registrations are checked but not saved.
     public var credentialStore: CredentialStore?
+    /// Where every run's trace is saved. `nil`: runs are not saved.
+    public var traceStore: TraceStore?
     /// The local RP that makes the challenges and checks the results (brief 03).
     public var relyingParty: LocalRelyingParty
     /// Randomness for PIN protocol 2. Injectable for tests.
@@ -28,6 +30,7 @@ public struct FIDOSimConfiguration: Sendable {
         pinStore: (any PINStore)? = nil,
         onCardReset: @escaping @Sendable (String) -> Void = { _ in },
         credentialStore: CredentialStore? = nil,
+        traceStore: TraceStore? = nil,
         relyingParty: LocalRelyingParty = LocalRelyingParty(),
         pinRandomness: any PinUvAuthRandomness = SystemPinUvAuthRandomness()
     ) {
@@ -39,6 +42,7 @@ public struct FIDOSimConfiguration: Sendable {
         self.pinStore = pinStore
         self.onCardReset = onCardReset
         self.credentialStore = credentialStore
+        self.traceStore = traceStore
         self.relyingParty = relyingParty
         self.pinRandomness = pinRandomness
     }

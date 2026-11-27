@@ -1,9 +1,9 @@
 import FIDOKit
 import SwiftUI
 
-/// Timing tiles, warnings and the trace in Hex, Safe or Decoded form, for the selected trace.
+/// Timing tiles, warnings and the trace in Hex, Safe or Decoded form.
 struct TraceResultSections: View {
-    @Bindable var model: ScenarioRunModel
+    @Binding var displayMode: ExchangeDisplayMode
     let trace: Trace
     let metrics: TraceMetrics
 
@@ -17,11 +17,11 @@ struct TraceResultSections: View {
             WarningListView(warnings: trace.warnings)
         }
 
-        if model.displayMode == .decoded {
+        if displayMode == .decoded {
             DecodedTraceView(trace: trace, header: modePicker)
         } else {
             Section {
-                TraceListView(exchanges: trace.exchanges, hidesSensitive: model.displayMode.hidesSensitive)
+                TraceListView(exchanges: trace.exchanges, hidesSensitive: displayMode.hidesSensitive)
             } header: {
                 modePicker
             } footer: {
@@ -34,7 +34,7 @@ struct TraceResultSections: View {
         HStack {
             Text("Exchanges")
             Spacer()
-            Picker("Display", selection: $model.displayMode) {
+            Picker("Display", selection: $displayMode) {
                 ForEach(ExchangeDisplayMode.allCases) { mode in
                     Text(mode.title).tag(mode)
                 }

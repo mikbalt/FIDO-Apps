@@ -1,7 +1,7 @@
 import FIDOKit
 import SwiftUI
 
-/// Run and Cancel, the live step list and elapsed time, or the selected History trace.
+/// Run and Cancel, the live step list and elapsed time.
 struct ScenarioRunSection: View {
     let model: ScenarioRunModel
     let runTitle: String
@@ -10,19 +10,12 @@ struct ScenarioRunSection: View {
 
     var body: some View {
         Section("Run") {
-            if model.isViewingHistory, let trace = model.selectedTrace {
-                historyStatus(for: trace)
-                Button("Back to latest", systemImage: "arrow.uturn.backward") {
-                    model.showLatest()
-                }
-            } else {
-                RunStatusView(
-                    title: title, systemImage: systemImage, tint: tint, note: model.lastError?.message,
-                    isActive: model.isRunning, startedAt: model.runStartedAt, endedAt: model.runEndedAt
-                )
-                if !model.steps.isEmpty {
-                    StepListView(steps: model.steps, isRunning: model.isRunning)
-                }
+            RunStatusView(
+                title: title, systemImage: systemImage, tint: tint, note: model.lastError?.message,
+                isActive: model.isRunning, startedAt: model.runStartedAt, endedAt: model.runEndedAt
+            )
+            if !model.steps.isEmpty {
+                StepListView(steps: model.steps, isRunning: model.isRunning)
             }
 
             if model.isRunning {
@@ -58,20 +51,7 @@ struct ScenarioRunSection: View {
         Self.tint(for: model.latestOutcome?.status)
     }
 
-    /// The outcome, time, transport and card of a History trace. No elapsed time: that belongs to the live run.
-    private func historyStatus(for trace: Trace) -> some View {
-        let time = trace.createdAt.formatted(date: .omitted, time: .standard)
-        let outcome = trace.outcome.map { $0.error?.name ?? $0.status.rawValue.capitalized } ?? trace.endReason?.displayName
-        return RunStatusView(
-            title: "History · \(time)",
-            systemImage: Self.systemImage(for: trace.outcome?.status),
-            tint: Self.tint(for: trace.outcome?.status),
-            note: [outcome ?? "In progress", trace.transport.rawValue, trace.card.label].joined(separator: " · "),
-            isActive: false, startedAt: nil, endedAt: nil
-        )
-    }
-
-    private static func systemImage(for status: TraceOutcome.Status?) -> String {
+    static func systemImage(for status: TraceOutcome.Status?) -> String {
         switch status {
         case .success: "checkmark.circle.fill"
         case .cancelled: "stop.circle"
@@ -80,7 +60,7 @@ struct ScenarioRunSection: View {
         }
     }
 
-    private static func tint(for status: TraceOutcome.Status?) -> Color {
+    static func tint(for status: TraceOutcome.Status?) -> Color {
         switch status {
         case .success: .green
         case .failure: .red

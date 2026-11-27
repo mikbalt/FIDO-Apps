@@ -125,7 +125,7 @@ public final class FIDOSimulator: Sendable {
             try validate()
         } catch {
             progress(.failed)
-            return unconnected(metadata, reason: .error, error: error)
+            return persisting(unconnected(metadata, reason: .error, error: error))
         }
 
         progress(.waitingForCard)
@@ -135,7 +135,7 @@ public final class FIDOSimulator: Sendable {
         } catch {
             let (reason, outcome) = Self.classify(error)
             progress(outcome.status == .cancelled ? .cancelled : .failed)
-            return unconnected(metadata, reason: reason, error: error)
+            return persisting(unconnected(metadata, reason: reason, error: error))
         }
         progress(.cardDetected)
 
@@ -155,15 +155,21 @@ public final class FIDOSimulator: Sendable {
             await recorder.finish(.success)
             let final = await finalize(value, progress)
             progress(.completed)
-            return ScenarioResult(value: final, error: nil, trace: await recorder.trace)
+            return persisting(ScenarioResult(value: final, error: nil, trace: await recorder.trace))
         } catch {
             let (reason, outcome) = Self.classify(error)
             await transport.close(errorMessage: outcome.status == .failure ? outcome.error?.message : nil)
             await recorder.end(reason: reason)
             await recorder.finish(outcome)
             progress(outcome.status == .cancelled ? .cancelled : .failed)
-            return ScenarioResult(value: nil, error: outcome.error.map(FIDOSimError.init), trace: await recorder.trace)
+            return persisting(ScenarioResult(value: nil, error: outcome.error.map(FIDOSimError.init), trace: await recorder.trace))
         }
+    }
+
+    /// Saves the run's trace to the history, if there is a store. A failed save never fails the scenario.
+    private func persisting<Value>(_ result: ScenarioResult<Value>) -> ScenarioResult<Value> {
+        try? configuration.traceStore?.save(result.trace)
+        return result
     }
 
     /// A trace for a scenario that never reached a card: no session events, just how it ended.

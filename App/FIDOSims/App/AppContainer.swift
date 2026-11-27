@@ -14,12 +14,15 @@ final class AppContainer {
         #endif
         // A credentials file that cannot be read is left alone; the app then works with an empty in-memory store.
         let store = (try? CredentialStore(fileURL: CredentialStore.defaultFileURL())) ?? CredentialStore()
+        let traceStore = TraceStore(
+            directory: (try? TraceStore.defaultDirectory()) ?? FileManager.default.temporaryDirectory.appending(path: "FIDOSimsHistory"))
         environment = LabEnvironment(
             isNFCAvailable: isNFCAvailable,
             fixtures: MockFixture.loadAll(from: bundle),
             makeTransport: Self.makeTransport,
             pinStore: KeychainPINStore(),
             credentialStore: store,
+            traceStore: traceStore,
             onCardReset: { label in _ = try? store.invalidateCredentials(forCard: label) }
         )
     }

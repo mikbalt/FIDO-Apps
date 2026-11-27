@@ -33,7 +33,8 @@ enum TestSupport {
     @MainActor
     static func environment(
         nfc: Bool = true, card: (any CardTransport)? = nil, store: any PINStore = InMemoryPINStore(),
-        credentials: CredentialStore = CredentialStore()
+        credentials: CredentialStore = CredentialStore(),
+        history: TraceStore = TraceStore(directory: FileManager.default.temporaryDirectory.appending(path: "fidosims-tests-\(UUID().uuidString)"))
     ) -> LabEnvironment {
         LabEnvironment(
             isNFCAvailable: nfc,
@@ -44,6 +45,7 @@ enum TestSupport {
             },
             pinStore: store,
             credentialStore: credentials,
+            traceStore: history,
             onCardReset: { label in _ = try? credentials.invalidateCredentials(forCard: label) }
         )
     }
