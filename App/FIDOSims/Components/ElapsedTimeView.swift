@@ -16,8 +16,14 @@ struct ElapsedTimeView: View {
     }
 
     private func label(_ seconds: TimeInterval) -> some View {
-        Text("\(max(seconds, 0), format: .number.precision(.fractionLength(1))) s")
+        Text(Self.format(seconds))
             .monospacedDigit()
             .foregroundStyle(.secondary)
+    }
+
+    /// Seconds with one fixed `.` decimal, whatever the device locale, e.g. `0.3 s`.
+    static func format(_ seconds: TimeInterval) -> String {
+        let tenths = Int((max(seconds, 0) * 10).rounded())
+        return "\(tenths / 10).\(tenths % 10) s"
     }
 }

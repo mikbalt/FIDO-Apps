@@ -7,10 +7,10 @@ struct GetInfoTableView: View {
 
     var body: some View {
         Section("GetInfo") {
-            row("versions", info.versions.joined(separator: ", "))
+            row("versions", Self.list(info.versions.map(CBORValue.text)))
             row("aaguid", info.aaguid?.uuidString ?? "—")
-            row("pinUvAuthProtocols", list(info.pinUvAuthProtocols.map(String.init)))
-            row("algorithms", list(info.algorithms.map(\.name)))
+            row("pinUvAuthProtocols", Self.list(info.pinUvAuthProtocols.map { CBORValue.unsigned(UInt64($0)) }))
+            row("algorithms", Self.list(info.algorithms.map { CBORValue.text($0.name) }))
             row("maxMsgSize", info.maxMsgSize.map(String.init) ?? "— (1024)")
             row("maxCredentialCountInList", info.maxCredentialCountInList.map(String.init) ?? "—")
             row("minPINLength", "\(info.minPINLength)")
@@ -25,8 +25,9 @@ struct GetInfoTableView: View {
         }
     }
 
-    private func list(_ items: [String]) -> String {
-        items.isEmpty ? "—" : items.joined(separator: ", ")
+    /// Typed lists use the same CBOR diagnostic style as the raw entries, e.g. `["FIDO_2_0", "FIDO_2_1"]`.
+    static func list(_ items: [CBORValue]) -> String {
+        items.isEmpty ? "—" : CBORDiagnostic.format(.array(items))
     }
 
     private func row(_ name: String, _ value: String) -> some View {
