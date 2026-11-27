@@ -8,7 +8,7 @@ public final class FIDOSimulator: Sendable {
     public static let prompt = "Hold the card near the top of the iPhone"
 
     private let transport: any CardTransport
-    private let configuration: FIDOSimConfiguration
+    let configuration: FIDOSimConfiguration
 
     public init(transport: any CardTransport, configuration: FIDOSimConfiguration) {
         self.transport = transport
@@ -88,18 +88,32 @@ public final class FIDOSimulator: Sendable {
 
     // MARK: - Running a scenario
 
-    private static func requirePinProtocol2(_ info: AuthenticatorInfo) throws {
+    static func requirePinProtocol2(_ info: AuthenticatorInfo) throws {
         guard info.supportsClientPIN else { throw PINError.clientPINUnsupported }
         // Brief 02 §2: a protocol-1-only card is a stop-and-ask, not something to work around.
         guard info.supportsPinProtocol2 else { throw PINError.pinProtocol2Unsupported(listed: info.pinUvAuthProtocols) }
     }
 
-    private func run<Value: Sendable>(
+    func run<Value: Sendable>(
         _ scenario: TraceScenario,
         cardLabel: String,
         progress: @escaping @Sendable (ScenarioStep) -> Void,
         validate: () throws -> Void = {},
         body: (ScenarioContext) async throws -> Value
+    ) async -> ScenarioResult<Value> {
+        await run(scenario, cardLabel: cardLabel, progress: progress, validate: validate, body: body, finalize: { value, _ in value })
+    }
+
+    /// Runs `body` with the card, closes the session, then runs `finalize` (RP checks and storing) before the
+    /// scenario reports `completed`. `finalize` only runs after a successful `body`; its time is not part of
+    /// the trace.
+    func run<Raw: Sendable, Value: Sendable>(
+        _ scenario: TraceScenario,
+        cardLabel: String,
+        progress: @escaping @Sendable (ScenarioStep) -> Void,
+        validate: () throws -> Void = {},
+        body: (ScenarioContext) async throws -> Raw,
+        finalize: (Raw, _ progress: @Sendable (ScenarioStep) -> Void) async -> Value
     ) async -> ScenarioResult<Value> {
         let metadata = TraceMetadata(
             app: configuration.app, transport: transport.kind, device: configuration.device,
@@ -111,7 +125,7 @@ public final class FIDOSimulator: Sendable {
             try validate()
         } catch {
             progress(.failed)
-            return unconnected(metadata, reason: .error, error: error)
+            return persisting(unconnected(metadata, reason: .error, error: error))
         }
 
         progress(.waitingForCard)
@@ -121,7 +135,7 @@ public final class FIDOSimulator: Sendable {
         } catch {
             let (reason, outcome) = Self.classify(error)
             progress(outcome.status == .cancelled ? .cancelled : .failed)
-            return unconnected(metadata, reason: reason, error: error)
+            return persisting(unconnected(metadata, reason: reason, error: error))
         }
         progress(.cardDetected)
 
@@ -139,16 +153,23 @@ public final class FIDOSimulator: Sendable {
             await transport.close(errorMessage: nil)
             await recorder.end(reason: .completed)
             await recorder.finish(.success)
+            let final = await finalize(value, progress)
             progress(.completed)
-            return ScenarioResult(value: value, error: nil, trace: await recorder.trace)
+            return persisting(ScenarioResult(value: final, error: nil, trace: await recorder.trace))
         } catch {
             let (reason, outcome) = Self.classify(error)
             await transport.close(errorMessage: outcome.status == .failure ? outcome.error?.message : nil)
             await recorder.end(reason: reason)
             await recorder.finish(outcome)
             progress(outcome.status == .cancelled ? .cancelled : .failed)
-            return ScenarioResult(value: nil, error: outcome.error.map(FIDOSimError.init), trace: await recorder.trace)
+            return persisting(ScenarioResult(value: nil, error: outcome.error.map(FIDOSimError.init), trace: await recorder.trace))
         }
+    }
+
+    /// Saves the run's trace to the history, if there is a store. A failed save never fails the scenario.
+    private func persisting<Value>(_ result: ScenarioResult<Value>) -> ScenarioResult<Value> {
+        try? configuration.traceStore?.save(result.trace)
+        return result
     }
 
     /// A trace for a scenario that never reached a card: no session events, just how it ended.

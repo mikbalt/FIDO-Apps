@@ -143,6 +143,6 @@ struct PINViewModelTests {
         model.run()
         #expect(model.setupError != nil)
         #expect(!model.runner.isRunning)
-        #expect(model.runner.history.isEmpty)
+        #expect(model.runner.latestTrace == nil)
     }
 }
