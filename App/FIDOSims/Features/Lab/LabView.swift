@@ -8,6 +8,8 @@ struct LabView: View {
     @State private var setPIN: SetPINViewModel
     @State private var reset: ResetViewModel
     @State private var registrations: RegistrationsViewModel
+    @State private var register: RegisterViewModel
+    @State private var authenticate: AuthenticateViewModel
     @State private var history: HistoryViewModel
 
     init(environment: LabEnvironment) {
@@ -16,6 +18,8 @@ struct LabView: View {
         _setPIN = State(initialValue: SetPINViewModel(environment: environment))
         _reset = State(initialValue: ResetViewModel(environment: environment))
         _history = State(initialValue: HistoryViewModel(store: environment.traceStore))
+        _register = State(initialValue: RegisterViewModel(environment: environment))
+        _authenticate = State(initialValue: AuthenticateViewModel(environment: environment))
         _registrations = State(initialValue: RegistrationsViewModel(store: environment.credentialStore))
     }
 
@@ -24,6 +28,10 @@ struct LabView: View {
             List {
                 Section("Card") {
                     NavigationLink("Diagnostics") { DiagnosticsView(model: diagnostics) }
+                }
+                Section("Register and authenticate") {
+                    NavigationLink("Register") { RegisterView(model: register) }
+                    NavigationLink("Authenticate") { AuthenticateView(model: authenticate) }
                 }
                 Section("Registrations") {
                     NavigationLink("Registrations") { RegistrationsView(model: registrations) }
